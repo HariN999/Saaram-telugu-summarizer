@@ -74,6 +74,8 @@ class URLRequest(BaseModel):
 
 
 class SummarizeResponse(BaseModel):
+    status: Literal["ok", "fallback"] = Field(default="ok", description="Processing status")
+    message: Optional[str] = Field(None, description="Fallback or informational message")
     summary: str = Field(..., description="Generated summary")
     method: str = Field(..., description="Summarization method used")
     audio_url: Optional[str] = Field(None, description="URL to audio file")
@@ -334,6 +336,8 @@ def summarize_text(request: SummarizeRequest):
             audio_url = f"/audio/{filename}"
 
         return SummarizeResponse(
+            status=result.get("status", "ok"),
+            message=result.get("message"),
             summary=result["summary"],
             method=result["method"],
             audio_url=audio_url,
@@ -377,6 +381,8 @@ def summarize_url(request: URLRequest):
             audio_url = f"/audio/{filename}"
 
         return SummarizeResponse(
+            status=result.get("status", "ok"),
+            message=result.get("message"),
             summary=result["summary"],
             method=result["method"],
             audio_url=audio_url,

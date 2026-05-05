@@ -5,11 +5,14 @@ Supports separate base and finetuned model slots.
 
 import os
 import logging
+from contextvars import ContextVar
+from typing import Optional
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from summarize_tfidf import tfidf_summarize
 
 logger = logging.getLogger(__name__)
+_MT5_FALLBACK_MESSAGE: ContextVar[Optional[str]] = ContextVar("_MT5_FALLBACK_MESSAGE", default=None)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "model", "mt5-telugu-news-finetuned")
@@ -22,6 +25,21 @@ _base_tokenizer = None
 _base_model = None
 _finetuned_tokenizer = None
 _finetuned_model = None
+
+
+def clear_mt5_fallback_message() -> None:
+    _MT5_FALLBACK_MESSAGE.set(None)
+
+
+def get_mt5_fallback_message() -> Optional[str]:
+    return _MT5_FALLBACK_MESSAGE.get()
+
+
+def _fallback_to_tfidf(text: str, model_label: str, exc: Exception) -> str:
+    print("mT5 failed:", exc)
+    logger.warning("%s summarization failed; falling back to TF-IDF: %s", model_label, exc)
+    _MT5_FALLBACK_MESSAGE.set("Transformer model unavailable, using TF-IDF")
+    return tfidf_summarize(text)
 
 
 def _load_base_model():
@@ -74,22 +92,22 @@ def mT5_base_summarize(text: str) -> str:
     """Summarize using the public mT5 multilingual XLSum base model."""
     try:
         _load_base_model()
-        return _run_summarize(_base_tokenizer, _base_model, text)
+        summary = _run_summarize(_base_tokenizer, _base_model, text)
+        _MT5_FALLBACK_MESSAGE.set(None)
+        return summary
     except Exception as exc:
-        print("mT5 failed, falling back to TF-IDF:", exc)
-        logger.warning("mT5 base summarization failed; falling back to TF-IDF: %s", exc)
-        return tfidf_summarize(text)
+        return _fallback_to_tfidf(text, "mT5 base", exc)
 
 
 def mT5_finetuned_summarize(text: str) -> str:
     """Summarize using finetuned mT5 (falls back to base if local model not found)."""
     try:
         _load_finetuned_model()
-        return _run_summarize(_finetuned_tokenizer, _finetuned_model, text)
+        summary = _run_summarize(_finetuned_tokenizer, _finetuned_model, text)
+        _MT5_FALLBACK_MESSAGE.set(None)
+        return summary
     except Exception as exc:
-        print("mT5 failed, falling back to TF-IDF:", exc)
-        logger.warning("mT5 fine-tuned summarization failed; falling back to TF-IDF: %s", exc)
-        return tfidf_summarize(text)
+        return _fallback_to_tfidf(text, "mT5 fine-tuned", exc)
 
 
 # Legacy alias — kept for backwards compatibility with older pipeline versions
