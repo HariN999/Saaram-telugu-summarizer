@@ -76,7 +76,8 @@ def mT5_base_summarize(text: str) -> str:
         _load_base_model()
         return _run_summarize(_base_tokenizer, _base_model, text)
     except Exception as exc:
-        logger.warning("mT5 base summarization failed; falling back to TF-IDF: %s", exc, exc_info=True)
+        print("mT5 failed, falling back to TF-IDF:", exc)
+        logger.warning("mT5 base summarization failed; falling back to TF-IDF: %s", exc)
         return tfidf_summarize(text)
 
 
@@ -86,7 +87,8 @@ def mT5_finetuned_summarize(text: str) -> str:
         _load_finetuned_model()
         return _run_summarize(_finetuned_tokenizer, _finetuned_model, text)
     except Exception as exc:
-        logger.warning("mT5 fine-tuned summarization failed; falling back to TF-IDF: %s", exc, exc_info=True)
+        print("mT5 failed, falling back to TF-IDF:", exc)
+        logger.warning("mT5 fine-tuned summarization failed; falling back to TF-IDF: %s", exc)
         return tfidf_summarize(text)
 
 
