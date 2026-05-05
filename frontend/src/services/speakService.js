@@ -1,7 +1,7 @@
 import { FALLBACK_NEWS } from "../constants/speakConstants";
 import { normalizeNewsResponse } from "../utils/speakParsers";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 const requestJson = async (path) => {
   const response = await fetch(`${API_BASE_URL}${path}`);

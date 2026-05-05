@@ -2,7 +2,7 @@
  * API Service for Telugu News Summarization
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 class APIError extends Error {
   constructor(message, status) {

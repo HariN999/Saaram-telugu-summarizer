@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 from clean import clean_text
-from config import API_HOST, API_PORT, CORS_ORIGINS, DATA_DIR, DEBUG
+from config import API_HOST, API_PORT, CORS_ORIGINS, CORS_ORIGIN_REGEX, DATA_DIR, DEBUG
 from pipeline import run_pipeline
 from services.news_service import fetch_telugu_news
 from tts import text_to_speech
@@ -38,6 +38,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
