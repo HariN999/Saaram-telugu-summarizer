@@ -83,6 +83,14 @@ def tfidf_boost(article):
     return tfidf_summarize(boosted)
 
 
+def mt5_base_strict(article):
+    return mT5_base_summarize(article, allow_fallback=False)
+
+
+def mt5_finetuned_strict(article):
+    return mT5_finetuned_summarize(article, allow_fallback=False)
+
+
 # ============================================================
 # LOAD DATASET
 # ============================================================
@@ -114,7 +122,12 @@ def evaluate(model_name, fn, debug=True):
     for i, (article, reference) in enumerate(dataset, 1):
         print(f"  {model_name} [{i}/{len(dataset)}]", end="\r")
 
-        pred = normalize_telugu(fn(article) or "")
+        try:
+            pred = normalize_telugu(fn(article) or "")
+        except Exception as exc:
+            print(f"\n  ERROR: {model_name} failed on sample {i}; benchmark stopped.")
+            print(f"  Root cause: {type(exc).__name__}: {exc}")
+            raise
         ref  = normalize_telugu(reference)
 
         if debug and i == 1:
@@ -162,8 +175,8 @@ def evaluate(model_name, fn, debug=True):
 if __name__ == "__main__":
     RESULTS = []
     RESULTS.append(evaluate("TFIDF (BOOSTED)", tfidf_boost))
-    RESULTS.append(evaluate("mT5 BASE",        mT5_base_summarize))
-    RESULTS.append(evaluate("mT5 FINETUNED",   mT5_finetuned_summarize))
+    RESULTS.append(evaluate("mT5 BASE",        mt5_base_strict))
+    RESULTS.append(evaluate("mT5 FINETUNED",   mt5_finetuned_strict))
 
     print("\n===== IEEE LATEX TABLE =====")
     print("\\begin{tabular}{lcccc}")

@@ -90,7 +90,7 @@ function TextSummarize() {
       const result = await APIService.summarizeText(inputText, selectedMethod);
       setProcessingStatus("Summary generated successfully!");
       setSummary(result.summary);
-      setUsedMethod(result.method);
+      setUsedMethod(result.executed_method || result.method);
       if (result.audio_url) {
         setAudioUrl(result.audio_url);
       }

@@ -39,7 +39,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_origin_regex=CORS_ORIGIN_REGEX,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -76,6 +76,9 @@ class URLRequest(BaseModel):
 class SummarizeResponse(BaseModel):
     status: Literal["ok", "fallback"] = Field(default="ok", description="Processing status")
     message: Optional[str] = Field(None, description="Fallback or informational message")
+    requested_method: str = Field(..., description="Summarization method requested by the client")
+    executed_method: str = Field(..., description="Summarization method that actually produced the summary")
+    fallback_reason: Optional[str] = Field(None, description="Exact fallback reason when status is fallback")
     summary: str = Field(..., description="Generated summary")
     method: str = Field(..., description="Summarization method used")
     audio_url: Optional[str] = Field(None, description="URL to audio file")
@@ -90,6 +93,10 @@ class LatestNewsItem(BaseModel):
     title: str = Field(..., description="News title")
     summary: str = Field(..., description="AI summarized Telugu news")
     method: str = Field(..., description="Summarization method used")
+    requested_method: str = Field(..., description="Summarization method requested internally")
+    executed_method: str = Field(..., description="Summarization method that actually produced the summary")
+    status: Literal["ok", "fallback"] = Field(default="ok", description="Processing status")
+    fallback_reason: Optional[str] = Field(None, description="Exact fallback reason when status is fallback")
     audio_url: Optional[str] = Field(None, description="URL to audio file")
     top_news_audio_url: Optional[str] = Field(None, description="Edge TTS URL for top-news mode")
     brief_audio_url: Optional[str] = Field(None, description="Edge TTS URL for brief mode")
@@ -111,28 +118,25 @@ def _summary_cache_key(text: str, method: str) -> str:
     return hashlib.sha256(f"{method}::{text}".encode("utf-8")).hexdigest()
 
 
-def _get_cached_summary(text: str, method: str) -> str | None:
+def _get_cached_summary(text: str, method: str) -> dict[str, object] | None:
     cache_key = _summary_cache_key(text, method)
     now = time.time()
     with _SUMMARY_CACHE_LOCK:
         cached = _SUMMARY_CACHE.get(cache_key)
         if cached and now - float(cached["timestamp"]) < SUMMARY_CACHE_TTL_SECONDS:
-            return str(cached["summary"])
+            return dict(cached)
         if cached:
             _SUMMARY_CACHE.pop(cache_key, None)
     return None
 
 
-def _set_cached_summary(text: str, method: str, summary: str) -> None:
-    if not summary:
+def _set_cached_summary(text: str, method: str, result: dict[str, object]) -> None:
+    if not result.get("summary"):
         return
 
     cache_key = _summary_cache_key(text, method)
     with _SUMMARY_CACHE_LOCK:
-        _SUMMARY_CACHE[cache_key] = {
-            "timestamp": time.time(),
-            "summary": summary,
-        }
+        _SUMMARY_CACHE[cache_key] = {"timestamp": time.time(), **result}
 
 
 def _build_audio_url(audio_path: str | None) -> str | None:
@@ -206,20 +210,30 @@ def latest_news(
                 continue
 
             summarize_start = time.perf_counter()
-            summary = _get_cached_summary(article_text, "mt5_finetuned")
-            if summary is None:
+            result = _get_cached_summary(article_text, "mt5_finetuned")
+            if result is None:
                 result = run_pipeline(
                     text_or_url=article_text,
                     method="mt5_finetuned",
                     generate_audio=False,
                 )
-                summary = result.get("summary", "").strip()
-                _set_cached_summary(article_text, "mt5_finetuned", summary)
-            else:
-                summary = summary.strip()
+                _set_cached_summary(article_text, "mt5_finetuned", result)
+
+            summary = str(result.get("summary", "")).strip()
+            requested_method = str(result.get("requested_method", "mt5_finetuned"))
+            executed_method = str(result.get("executed_method", result.get("method", "mt5_finetuned")))
+            status = str(result.get("status", "ok"))
+            fallback_reason = result.get("fallback_reason")
             summarize_elapsed = time.perf_counter() - summarize_start
             summarize_total += summarize_elapsed
-            logger.info("latest-news summarization stage completed in %.2fs", summarize_elapsed)
+            logger.info(
+                "latest_news_summary_complete requested_method=%s executed_method=%s status=%s elapsed=%.2fs fallback_reason=%s",
+                requested_method,
+                executed_method,
+                status,
+                summarize_elapsed,
+                fallback_reason,
+            )
 
             title = article.get("title", "").strip() or "Telugu News"
             source_name = article.get("source", "rss")
@@ -236,7 +250,11 @@ def latest_news(
                 {
                     "title": title,
                     "summary": summary,
-                    "method": "mt5_finetuned",
+                    "method": executed_method,
+                    "requested_method": requested_method,
+                    "executed_method": executed_method,
+                    "status": status,
+                    "fallback_reason": fallback_reason,
                     "headline": title,
                     "firstLine": first_line,
                     "brief": summary,
@@ -283,6 +301,10 @@ def latest_news(
                     title=item["title"],
                     summary=item["summary"],
                     method=item["method"],
+                    requested_method=item["requested_method"],
+                    executed_method=item["executed_method"],
+                    status=item["status"],
+                    fallback_reason=item["fallback_reason"],
                     audio_url=audio_url,
                     top_news_audio_url=tts_results.get((index, "top_news_audio_url")),
                     brief_audio_url=audio_url,
@@ -338,6 +360,9 @@ def summarize_text(request: SummarizeRequest):
         return SummarizeResponse(
             status=result.get("status", "ok"),
             message=result.get("message"),
+            requested_method=result.get("requested_method", request.method),
+            executed_method=result.get("executed_method", result["method"]),
+            fallback_reason=result.get("fallback_reason"),
             summary=result["summary"],
             method=result["method"],
             audio_url=audio_url,
@@ -383,6 +408,9 @@ def summarize_url(request: URLRequest):
         return SummarizeResponse(
             status=result.get("status", "ok"),
             message=result.get("message"),
+            requested_method=result.get("requested_method", request.method),
+            executed_method=result.get("executed_method", result["method"]),
+            fallback_reason=result.get("fallback_reason"),
             summary=result["summary"],
             method=result["method"],
             audio_url=audio_url,

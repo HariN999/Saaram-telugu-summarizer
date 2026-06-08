@@ -89,7 +89,7 @@ Extract -> Clean -> Summarize -> Optional Text-to-Speech
 JSON summary response + optional MP3 audio URL
 ```
 
-The backend is designed to keep the API responsive even when transformer loading fails. If the mT5 tokenizer or model cannot be loaded, the summarization path logs a warning and returns a TF-IDF summary instead of crashing the API.
+The backend is designed to keep the API responsive even when transformer loading fails. If the mT5 tokenizer or model cannot be loaded, the summarization path logs the root cause and returns a TF-IDF summary instead of crashing the API. API responses expose both the requested model and the model that actually executed, so fallback results are never labeled as mT5.
 
 ## 🧩 NLP Pipeline Components
 
@@ -196,6 +196,8 @@ pip install -r requirements.txt
 cd backend
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
+
+Tokenizer dependencies are included in `requirements.txt`. mT5/SentencePiece loading requires both `sentencepiece` and `protobuf`; missing `protobuf` can cause tokenizer initialization to fail and trigger the TF-IDF fallback path.
 
 Backend runs at:
 
@@ -304,6 +306,13 @@ Runtime behavior:
 1. Try local fine-tuned model if present.
 2. Fall back to `csebuetnlp/mT5_multilingual_XLSum` if local model is absent.
 3. Fall back to TF-IDF if mT5/tokenizer loading fails.
+
+Fallback visibility:
+
+- `requested_method` is the method selected by the UI or route.
+- `executed_method` is the method that actually produced the summary.
+- `status` is `ok` or `fallback`.
+- `fallback_reason` contains the categorized root cause, such as a dependency failure, missing model files, memory/timeout failure, or tokenizer initialization failure.
 
 To use a local fine-tuned model during development, place it in:
 

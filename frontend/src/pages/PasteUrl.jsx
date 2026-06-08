@@ -78,7 +78,7 @@ function PasteUrl() {
         summary: response.summary,
         audioUrl: response.audio_url || null,
         originalUrl: url,
-        method: response.method,
+        method: response.executed_method || response.method,
       });
     } catch (err) {
       setError(err.message || "Failed to process URL. Please check the URL and try again.");
