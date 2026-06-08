@@ -6,9 +6,19 @@ numpy==2.4.2
 pydantic==2.12.5
 requests==2.32.5
 scikit-learn==1.8.0
-transformers==5.0.0
-torch==2.10.0
+
+# NLP / Transformer stack
+
+transformers==4.57.1
+tokenizers==0.22.1
 sentencepiece==0.2.1
 tiktoken==0.12.0
-tokenizers==0.22.2
+protobuf>=6.31.0,<7
+
+# PyTorch
+
+torch==2.10.0
+
+# ASGI server
+
 uvicorn==0.40.0
