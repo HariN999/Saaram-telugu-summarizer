@@ -6,11 +6,11 @@
 ![Docker](https://img.shields.io/badge/Docker-Render-2496ED)
 ![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000)
 
-Full-stack NLP application for Telugu news summarization and speech generation.
+Practical low-resource Telugu NLP system for news summarization and speech generation, with deployment-focused reliability improvements for constrained hosting.
 
 **Status:** Research paper under review at **ICANITS 2026**.
 
-The system supports direct Telugu text input, URL-based article extraction, extractive TF-IDF summarization, transformer-based mT5 summarization, and optional Telugu text-to-speech audio generation.
+The system supports direct Telugu text input, URL-based article extraction, extractive TF-IDF summarization, transformer-based mT5 summarization, and optional Telugu text-to-speech audio generation with graceful fallback behavior.
 
 ## 🚀 Live Demo
 
@@ -19,7 +19,7 @@ The system supports direct Telugu text input, URL-based article extraction, extr
 - API Docs: https://automated-telugu-text-summarization-and-s2gz.onrender.com/docs
 - Health Check: https://automated-telugu-text-summarization-and-s2gz.onrender.com/health
 
-For the smoothest demo on free hosting, start with the `TF-IDF` method. Transformer requests may take longer because the model is loaded lazily.
+For the smoothest demo on free hosting, start with the `TF-IDF` method. Transformer requests may take longer because the model is loaded lazily and Speak mode is intentionally heavier than text-only summarize paths.
 
 ## 🎬 Video Demo
 
@@ -32,6 +32,7 @@ What the demo shows:
 - Runtime model selection with TF-IDF / mT5
 - Output generation through FastAPI
 - Optional Telugu MP3 audio output
+- Graceful fallback behavior for transformer and tokenizer failures
 
 Note: TTS audio output is supported, but playback may not be audible in the recording depending on screen-recording settings.
 
@@ -58,7 +59,13 @@ Note: TTS audio output is supported, but playback may not be audible in the reco
 - Vite frontend deployed on Vercel
 - Research-backed architecture with evaluation metrics
 
-## 🏗️ Architecture
+## Speak / Radio Mode
+
+Speak mode is the premium AI Telugu radio/news experience. It combines RSS ingestion, article extraction, summarization, and Edge TTS into an audio-first pipeline for narrated bulletins. Text and URL summarization remain optional-audio paths so the app can stay responsive for faster summarization use cases.
+
+Edge TTS is preferred over browser speech for consistent Telugu voice quality and reusable MP3 playback, while frontend logic preserves the existing premium audio-first identity.
+
+## Architecture
 
 ![Architecture](assets/system_architecture.svg)
 
@@ -287,25 +294,38 @@ Environment variable:
 VITE_API_URL=https://automated-telugu-text-summarization-and-s2gz.onrender.com
 ```
 
+## 🔧 Reliability & Hardening
+
+This deployment includes practical production hardening for constrained infrastructure:
+
+- Bounded in-memory caches for summary results, TTS audio paths, and extracted article text to prevent unbounded memory growth.
+- Graceful fallback transparency with `requested_method` vs `executed_method` and `fallback_reason` fields.
+- SSRF and URL safety protections for public URL summarization.
+- Input size limits and truncation metadata to keep transformer inputs predictable.
+- A readiness endpoint that can verify model availability and surface degraded states.
+- Reduced Edge TTS concurrency to lower transient memory spikes during Speak/latest-news audio generation.
+
 ## ⚠️ Deployment Notes
 
 - Render free tier can cold start after inactivity.
-- First mT5 request may be slow because Hugging Face models are loaded lazily.
-- TF-IDF is recommended for fast demos and health checks.
+- Preload is disabled by default on the 512MB tier to keep baseline memory pressure low.
+- Speak/Radio mode is heavier than text/URL summarization because it combines RSS ingestion, mT5 inference, and Edge TTS generation.
+- Edge TTS generation can add latency, especially for latest-news audio batches.
+- Bounded in-memory caches limit memory growth on long-running instances.
+- Optional TTS is available for text and URL summarize routes; audio is generated only when requested.
 - `backend/model/` is intentionally excluded from Docker builds to keep the image small.
-- If the local fine-tuned model is missing, the app falls back to the public Hugging Face mT5 base model.
 - `backend/data/` is used for generated audio files. On free hosting, local filesystem writes may not persist across restarts.
-- mT5/T5 tokenizers use SentencePiece. `sentencepiece` is a required dependency; `tiktoken` is included only as a defensive fallback for tokenizer conversion edge cases.
+- mT5/T5 tokenizers use SentencePiece. `sentencepiece` is required; `tiktoken` is included only as a defensive fallback for tokenizer conversion edge cases.
 
 ## 📦 Model Notes
 
-The experimental fine-tuned mT5 model is not required for deployment and is excluded from Docker.
+The fine-tuned Telugu mT5 model is included only for local research and development workflows. The public deployment intentionally avoids shipping the 3.6GB finetuned checkpoint to keep the Render free-tier deployment practical and to reduce memory pressure.
 
 Runtime behavior:
 
-1. Try local fine-tuned model if present.
-2. Fall back to `csebuetnlp/mT5_multilingual_XLSum` if local model is absent.
-3. Fall back to TF-IDF if mT5/tokenizer loading fails.
+1. If a local fine-tuned model exists, the backend will attempt to load it for research or development.
+2. For public deployment, the system relies on TF-IDF and the public `csebuetnlp/mT5_multilingual_XLSum` base model instead of the large local finetuned checkpoint.
+3. If mT5 or tokenizer loading fails, the app falls back to TF-IDF and reports fallback metadata.
 
 Fallback visibility:
 
