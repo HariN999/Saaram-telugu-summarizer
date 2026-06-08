@@ -16,12 +16,6 @@ const NEWS_LANGUAGE = "te";
 const commandMatches = (dictionary, transcript) =>
   dictionary.some((command) => transcript.includes(command));
 
-const joinSpokenParts = (...parts) =>
-  parts
-    .map((part) => String(part ?? "").trim())
-    .filter(Boolean)
-    .join(". ");
-
 const getModeAudioUrl = (newsItem, mode) => {
   switch (mode) {
     case "top-news":
@@ -42,9 +36,11 @@ function Speak() {
   const [newsData, setNewsData] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [error, setError] = useState(null);
+  const [loadingStatus, setLoadingStatus] = useState("");
   const [showVoiceIndicator, setShowVoiceIndicator] = useState(false);
 
   const playbackEnabledRef = useRef(false);
+  const loadingTimersRef = useRef([]);
 
   const t = TRANSLATIONS[uiLanguage];
   const currentModes = MODES[uiLanguage];
@@ -58,7 +54,6 @@ function Speak() {
     isMuted,
     setIsPlaying,
     playUrl,
-    speak,
     stop,
     toggleMute,
   } = useAudioPlayback({
@@ -66,21 +61,10 @@ function Speak() {
     defaultRate: 0.9,
   });
 
-  const getContentToSpeak = useCallback(
-    (newsItem) => {
-      switch (selectedMode) {
-        case "top-news":
-          return joinSpokenParts(newsItem.headline, newsItem.firstLine);
-        case "brief":
-          return joinSpokenParts(newsItem.headline, newsItem.brief);
-        case "radio":
-          return joinSpokenParts(newsItem.headline, newsItem.fullText);
-        default:
-          return newsItem.headline;
-      }
-    },
-    [selectedMode],
-  );
+  const clearLoadingTimers = useCallback(() => {
+    loadingTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    loadingTimersRef.current = [];
+  }, []);
 
   const speakNews = useCallback(
     (index) => {
@@ -92,7 +76,6 @@ function Speak() {
       }
 
       const newsItem = newsData[index];
-      const textToSpeak = getContentToSpeak(newsItem);
       const modeAudioUrl = getModeAudioUrl(newsItem, selectedMode);
       const handleEnd = () => {
         const nextIndex = index + 1;
@@ -110,6 +93,7 @@ function Speak() {
       const handleError = () => {
         playbackEnabledRef.current = false;
         setIsPlaying(false);
+        setError("Edge Telugu audio playback failed. Please refresh the bulletin and try again.");
       };
 
       if (modeAudioUrl) {
@@ -121,31 +105,38 @@ function Speak() {
         return;
       }
 
-      speak({
-        text: textToSpeak,
-        rate: selectedMode === "radio" ? 0.95 : 0.9,
-        onEnd: handleEnd,
-        onError: handleError,
-      });
+      playbackEnabledRef.current = false;
+      setIsPlaying(false);
+      setError("Premium Telugu audio is not ready for this bulletin. Please refresh and try again.");
     },
-    [getContentToSpeak, newsData, playUrl, selectedMode, setIsPlaying, speak],
+    [newsData, playUrl, selectedMode, setIsPlaying],
   );
 
   const handleFetchNews = useCallback(async () => {
+    clearLoadingTimers();
     setIsLoading(true);
     setError(null);
+    setLoadingStatus("Fetching Telugu news...");
+    loadingTimersRef.current = [
+      window.setTimeout(() => setLoadingStatus("Generating summaries..."), 5000),
+      window.setTimeout(() => setLoadingStatus("Generating Telugu radio audio..."), 15000),
+      window.setTimeout(() => setLoadingStatus("Preparing playback..."), 35000),
+    ];
 
     try {
-      const news = await fetchLatestNews();
+      const news = await fetchLatestNews(true);
       setNewsData(news);
       setCurrentIndex(0);
+      setLoadingStatus("Ready to play");
     } catch {
-      setError("Failed to load news. Please try again.");
+      setError("Failed to prepare Edge Telugu audio. Please refresh and try again.");
       setNewsData([]);
     } finally {
+      clearLoadingTimers();
       setIsLoading(false);
+      setLoadingStatus("");
     }
-  }, []);
+  }, [clearLoadingTimers]);
 
   const togglePlayback = useCallback(() => {
     if (newsData.length === 0) {
@@ -242,6 +233,8 @@ function Speak() {
     stop();
     setCurrentIndex(0);
   }, [selectedMode, stop]);
+
+  useEffect(() => clearLoadingTimers, [clearLoadingTimers]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] px-4 py-10 sm:px-6 sm:py-14">
@@ -435,6 +428,7 @@ function Speak() {
             currentMode={currentMode}
             selectedMode={selectedMode}
             isPlaying={isPlaying}
+            loadingStatus={loadingStatus}
           />
 
           <SpeakControls

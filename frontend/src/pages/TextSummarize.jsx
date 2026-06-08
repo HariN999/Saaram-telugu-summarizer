@@ -62,6 +62,7 @@ function TextSummarize() {
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [usedMethod, setUsedMethod] = useState("");
+  const [generateAudio, setGenerateAudio] = useState(false);
 
   const currentMethod = SUMMARIZATION_METHODS.find((m) => m.id === selectedMethod);
 
@@ -81,16 +82,22 @@ function TextSummarize() {
       return;
     }
     setIsProcessing(true);
-    setProcessingStatus(`Processing with ${currentMethod.name}...`);
+    setProcessingStatus(
+      generateAudio
+        ? `Processing with ${currentMethod.name} and generating audio...`
+        : `Processing with ${currentMethod.name}...`
+    );
     setError("");
     setSummary("");
     setAudioUrl("");
     setUsedMethod("");
     try {
-      const result = await APIService.summarizeText(inputText, selectedMethod);
-      setProcessingStatus("Summary generated successfully!");
+      const result = await APIService.summarizeText(inputText, selectedMethod, generateAudio);
+      setProcessingStatus(
+        result.audio_url ? "Summary and audio generated successfully!" : "Summary generated successfully!"
+      );
       setSummary(result.summary);
-      setUsedMethod(result.method);
+      setUsedMethod(result.executed_method || result.method);
       if (result.audio_url) {
         setAudioUrl(result.audio_url);
       }
@@ -258,6 +265,29 @@ function TextSummarize() {
               dir="auto"
             />
 
+            <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-4 py-3 transition-colors hover:border-indigo-300 dark:hover:border-indigo-500/40">
+              <span className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                  <Volume2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-[var(--text-primary)]">
+                    Generate Telugu Audio
+                  </span>
+                  <span className="block text-xs text-[var(--text-secondary)]">
+                    Adds Edge TTS MP3 after the summary
+                  </span>
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={generateAudio}
+                onChange={(event) => setGenerateAudio(event.target.checked)}
+                disabled={isProcessing}
+                className="h-4 w-4 accent-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </label>
+
             {/* Footer row */}
             <div className="mt-4 flex items-center justify-between gap-3">
               <div className="flex flex-col gap-0.5">
@@ -407,7 +437,7 @@ function TextSummarize() {
                         <div className="absolute inset-0 h-8 w-8 animate-ping-slow rounded-full border-2 border-indigo-400/30" />
                       </div>
                       <p className="text-xs font-medium text-[var(--text-secondary)]">
-                        Generating summary...
+                        {generateAudio ? "Generating summary and audio..." : "Generating summary..."}
                       </p>
                     </div>
                   ) : (

@@ -13,6 +13,7 @@ function SpeakResponseCard({
   currentMode,
   selectedMode,
   isPlaying,
+  loadingStatus,
 }) {
   return (
     <div className="mb-8 min-h-[180px]">
@@ -22,7 +23,9 @@ function SpeakResponseCard({
             <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
             <div className="absolute inset-0 h-10 w-10 animate-ping-slow rounded-full border-2 border-indigo-400/20" />
           </div>
-          <p className="text-sm font-medium text-[var(--text-secondary)]">{t.loading}</p>
+          <p className="text-sm font-medium text-[var(--text-secondary)]">
+            {loadingStatus || t.loading}
+          </p>
         </div>
       ) : newsData.length > 0 ? (
         <div className="text-center">

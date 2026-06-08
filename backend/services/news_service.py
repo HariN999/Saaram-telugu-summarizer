@@ -9,8 +9,8 @@ from threading import Lock
 from typing import Any
 
 import feedparser
-import requests
 from bs4 import BeautifulSoup
+from url_safety import safe_get
 
 RSS_SOURCES = [
     {
@@ -26,6 +26,13 @@ RSS_SOURCES = [
 CACHE_TTL_SECONDS = 180  # 3 minutes
 REQUEST_TIMEOUT_SECONDS = 8
 ARTICLE_CACHE_TTL_SECONDS = 300
+RSS_CONTENT_TYPES = (
+    "application/rss+xml",
+    "application/xml",
+    "text/xml",
+    "text/html",
+    "text/plain",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +86,10 @@ def _extract_article_text(article_url: str, fallback_text: str) -> str:
 
     start_time = time.perf_counter()
     try:
-        response = requests.get(
+        response = safe_get(
             article_url,
             timeout=REQUEST_TIMEOUT_SECONDS,
-            headers={"User-Agent": "TeluguAI-NewsFetcher/1.0"},
         )
-        response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
         for tag in soup(["script", "style"]):
@@ -150,12 +155,11 @@ def _build_item(source_name: str, entry: Any) -> dict[str, str] | None:
 def _parse_source(source_name: str, rss_url: str) -> list[dict[str, str]]:
     """Fetch and parse one RSS source with timeout/error handling."""
     start_time = time.perf_counter()
-    response = requests.get(
+    response = safe_get(
         rss_url,
         timeout=REQUEST_TIMEOUT_SECONDS,
-        headers={"User-Agent": "TeluguAI-NewsFetcher/1.0"},
+        allowed_content_types=RSS_CONTENT_TYPES,
     )
-    response.raise_for_status()
 
     parsed = feedparser.parse(response.content)
     max_workers = min(8, max(1, len(parsed.entries)))
