@@ -8,6 +8,8 @@ import time
 
 from extract import extract_text
 from clean import clean_text
+from config import MAX_MT5_INPUT_CHARS, MAX_SUMMARIZATION_CHARS
+from input_limits import apply_input_limit
 from summarize_tfidf import tfidf_summarize
 from summarize_mt5 import (
     clear_mt5_fallback_message,
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 def run_pipeline(
     text_or_url: str,
     method: str = "tfidf",
-    generate_audio: bool = True,
+    generate_audio: bool = False,
 ) -> dict:
     """
     Run complete summarization pipeline.
@@ -43,12 +45,21 @@ def run_pipeline(
     extracted_text = extract_text(text_or_url)
 
     # Step 2: Clean
+    m = method.lower()
     cleaned_text = clean_text(extracted_text)
+    input_limit = MAX_MT5_INPUT_CHARS if m.startswith("mt5_") else MAX_SUMMARIZATION_CHARS
+    cleaned_text, truncation_info = apply_input_limit(cleaned_text, max_chars=input_limit)
     if not cleaned_text:
         raise ValueError("No valid text found after cleaning")
+    if truncation_info.input_truncated:
+        logger.info(
+            "pipeline_input_truncated original_length=%d processed_length=%d limit=%d",
+            truncation_info.original_input_length,
+            truncation_info.processed_input_length,
+            truncation_info.input_limit,
+        )
 
     # Step 3: Summarize
-    m = method.lower()
     status = "ok"
     message = None
     fallback_reason = None
@@ -102,6 +113,7 @@ def run_pipeline(
         "status": status,
         "message": message,
         "fallback_reason": fallback_reason,
+        **truncation_info.to_dict(),
     }
 
 

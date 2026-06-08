@@ -43,7 +43,7 @@ class APIService {
   /**
    * Summarize text
    */
-  static async summarizeText(text, method = "tfidf", generateAudio = true) {
+  static async summarizeText(text, method = "tfidf", generateAudio = false) {
     const response = await fetch(`${API_BASE_URL}/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -59,7 +59,7 @@ class APIService {
   /**
    * Process URL
    */
-  static async processUrl(url, method = "tfidf", generateAudio = true) {
+  static async processUrl(url, method = "tfidf", generateAudio = false) {
     const response = await fetch(`${API_BASE_URL}/process-url`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

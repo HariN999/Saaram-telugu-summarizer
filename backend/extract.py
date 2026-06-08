@@ -2,29 +2,12 @@
 Text Extraction Module
 Extracts text from URLs or returns direct text input
 """
-import requests
 from bs4 import BeautifulSoup
-import re
 
+from clean import clean_text
+from url_safety import URLSafetyError, safe_get
 
-def clean_text(text: str) -> str:
-    """
-    Clean Telugu text by removing unwanted characters
-
-    Args:
-        text: Raw Telugu text
-
-    Returns:
-        Cleaned Telugu text
-    """
-    # Preserve Telugu characters (U+0C00-U+0C7F), Telugu dandas (U+0964, U+0965),
-    # ASCII digits, whitespace, and basic punctuation
-    text = re.sub(r"[^\u0C00-\u0C7F\u0964\u09650-9\s,.!?\"'-]", "", text)
-
-    # Collapse multiple spaces
-    text = re.sub(r"\s+", " ", text)
-
-    return text.strip()
+ARTICLE_CONTENT_TYPES = ("text/html", "text/plain", "application/xhtml+xml")
 
 
 def extract_text(text_or_url: str) -> str:
@@ -37,10 +20,9 @@ def extract_text(text_or_url: str) -> str:
     Returns:
         Extracted and cleaned text
     """
-    if text_or_url.startswith("http"):
+    if text_or_url.startswith(("http://", "https://")):
         try:
-            response = requests.get(text_or_url, timeout=10)
-            response.raise_for_status()
+            response = safe_get(text_or_url, allowed_content_types=ARTICLE_CONTENT_TYPES)
 
             soup = BeautifulSoup(response.text, "html.parser")
 
@@ -59,6 +41,8 @@ def extract_text(text_or_url: str) -> str:
             return clean_text(article_text)
 
         except Exception as e:
+            if isinstance(e, URLSafetyError):
+                raise ValueError(str(e)) from e
             raise ValueError(f"Failed to extract text from URL: {str(e)}")
 
     return clean_text(text_or_url)

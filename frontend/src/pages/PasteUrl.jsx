@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Link2, Loader2, CheckCircle2, AlertCircle,
-  Download, Copy, ExternalLink, ChevronDown,
+  Download, Copy, ExternalLink, ChevronDown, Volume2,
 } from "lucide-react";
 import APIService from "../services/api";
 
@@ -52,6 +52,7 @@ function PasteUrl() {
   const [selectedMethod, setSelectedMethod] = useState("tfidf");
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [generateAudio, setGenerateAudio] = useState(false);
 
   const currentMethod = SUMMARIZATION_METHODS.find((m) => m.id === selectedMethod);
 
@@ -72,7 +73,7 @@ function PasteUrl() {
     setResult(null);
 
     try {
-      const response = await APIService.processUrl(url, selectedMethod);
+      const response = await APIService.processUrl(url, selectedMethod, generateAudio);
       setResult({
         title: "News Article",
         summary: response.summary,
@@ -243,6 +244,29 @@ function PasteUrl() {
             )}
           </AnimatePresence>
 
+          <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-4 py-3 transition-colors hover:border-indigo-300 dark:hover:border-indigo-500/40">
+            <span className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
+                <Volume2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-[var(--text-primary)]">
+                  Also generate Telugu audio
+                </span>
+                <span className="block text-xs text-[var(--text-secondary)]">
+                  Optional Edge TTS MP3 for the summary
+                </span>
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={generateAudio}
+              onChange={(event) => setGenerateAudio(event.target.checked)}
+              disabled={isLoading}
+              className="h-4 w-4 accent-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+
           <div className="mt-5 flex items-center gap-3">
             <button
               onClick={handleFetchNews}
@@ -292,7 +316,9 @@ function PasteUrl() {
                 Processing your URL...
               </p>
               <p className="text-center text-sm text-[var(--text-secondary)]">
-                Fetching article, extracting text, and generating summary
+                {generateAudio
+                  ? "Fetching article, extracting text, summarizing, and generating audio"
+                  : "Fetching article, extracting text, and generating summary"}
               </p>
             </MotionDiv>
           )}

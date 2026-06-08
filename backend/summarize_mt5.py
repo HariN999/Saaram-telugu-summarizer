@@ -7,6 +7,7 @@ import os
 import logging
 import time
 from contextvars import ContextVar
+from threading import Lock
 from typing import Optional
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -27,6 +28,10 @@ _base_tokenizer = None
 _base_model = None
 _finetuned_tokenizer = None
 _finetuned_model = None
+_base_load_error: Optional[str] = None
+_finetuned_load_error: Optional[str] = None
+_base_lock = Lock()
+_finetuned_lock = Lock()
 
 
 def clear_mt5_fallback_message() -> None:
@@ -74,35 +79,55 @@ def _fallback_to_tfidf(text: str, model_label: str, exc: Exception, allow_fallba
 
 
 def _load_base_model():
-    global _base_tokenizer, _base_model
+    global _base_tokenizer, _base_model, _base_load_error
     if _base_tokenizer is not None:
         return
-    start = time.perf_counter()
-    logger.info("transformer_load_start model=mt5_base source=%s", BASE_MODEL_NAME)
-    _base_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, use_fast=False)
-    _base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL_NAME)
-    _base_model.eval()
-    logger.info("transformer_load_success model=mt5_base elapsed=%.2fs", time.perf_counter() - start)
+    with _base_lock:
+        if _base_tokenizer is not None:
+            return
+        start = time.perf_counter()
+        logger.info("transformer_load_start model=mt5_base source=%s", BASE_MODEL_NAME)
+        try:
+            _base_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, use_fast=False)
+            _base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL_NAME)
+            _base_model.eval()
+            _base_load_error = None
+            logger.info("transformer_load_success model=mt5_base elapsed=%.2fs", time.perf_counter() - start)
+        except Exception as exc:
+            _base_tokenizer = None
+            _base_model = None
+            _base_load_error = _classify_transformer_error(exc)
+            raise
 
 
 def _load_finetuned_model():
-    global _finetuned_tokenizer, _finetuned_model
+    global _finetuned_tokenizer, _finetuned_model, _finetuned_load_error
     if _finetuned_tokenizer is not None:
         return
-    start = time.perf_counter()
-    logger.info(
-        "transformer_load_start model=mt5_finetuned source=%s local_only=%s",
-        FINETUNED_MODEL,
-        FINETUNED_LOCAL_ONLY,
-    )
-    _finetuned_tokenizer = AutoTokenizer.from_pretrained(
-        FINETUNED_MODEL, local_files_only=FINETUNED_LOCAL_ONLY, use_fast=False
-    )
-    _finetuned_model = AutoModelForSeq2SeqLM.from_pretrained(
-        FINETUNED_MODEL, local_files_only=FINETUNED_LOCAL_ONLY
-    )
-    _finetuned_model.eval()
-    logger.info("transformer_load_success model=mt5_finetuned elapsed=%.2fs", time.perf_counter() - start)
+    with _finetuned_lock:
+        if _finetuned_tokenizer is not None:
+            return
+        start = time.perf_counter()
+        logger.info(
+            "transformer_load_start model=mt5_finetuned source=%s local_only=%s",
+            FINETUNED_MODEL,
+            FINETUNED_LOCAL_ONLY,
+        )
+        try:
+            _finetuned_tokenizer = AutoTokenizer.from_pretrained(
+                FINETUNED_MODEL, local_files_only=FINETUNED_LOCAL_ONLY, use_fast=False
+            )
+            _finetuned_model = AutoModelForSeq2SeqLM.from_pretrained(
+                FINETUNED_MODEL, local_files_only=FINETUNED_LOCAL_ONLY
+            )
+            _finetuned_model.eval()
+            _finetuned_load_error = None
+            logger.info("transformer_load_success model=mt5_finetuned elapsed=%.2fs", time.perf_counter() - start)
+        except Exception as exc:
+            _finetuned_tokenizer = None
+            _finetuned_model = None
+            _finetuned_load_error = _classify_transformer_error(exc)
+            raise
 
 
 def _run_summarize(tokenizer, model, text, max_length=128, min_length=30,
@@ -153,6 +178,38 @@ def mT5_finetuned_summarize(text: str, allow_fallback: bool = True) -> str:
         return summary
     except Exception as exc:
         return _fallback_to_tfidf(text, "mt5_finetuned", exc, allow_fallback)
+
+
+def get_model_status() -> dict[str, dict[str, Optional[str] | bool]]:
+    return {
+        "mt5_base": {
+            "loaded": _base_tokenizer is not None and _base_model is not None,
+            "available": _base_load_error is None,
+            "last_error": _base_load_error,
+        },
+        "mt5_finetuned": {
+            "loaded": _finetuned_tokenizer is not None and _finetuned_model is not None,
+            "available": _finetuned_load_error is None,
+            "last_error": _finetuned_load_error,
+        },
+    }
+
+
+def preload_models(methods: tuple[str, ...] = ("mt5_finetuned",)) -> dict[str, bool]:
+    results: dict[str, bool] = {}
+    for method in methods:
+        try:
+            if method == "mt5_base":
+                _load_base_model()
+            elif method == "mt5_finetuned":
+                _load_finetuned_model()
+            else:
+                continue
+            results[method] = True
+        except Exception:
+            logger.warning("transformer_preload_failed model=%s", method, exc_info=True)
+            results[method] = False
+    return results
 
 
 # Legacy alias — kept for backwards compatibility with older pipeline versions

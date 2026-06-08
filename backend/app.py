@@ -17,10 +17,22 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 from clean import clean_text
-from config import API_HOST, API_PORT, CORS_ORIGINS, CORS_ORIGIN_REGEX, DATA_DIR, DEBUG
+from config import (
+    API_HOST,
+    API_PORT,
+    CORS_ORIGINS,
+    CORS_ORIGIN_REGEX,
+    DATA_DIR,
+    DEBUG,
+    MAX_RAW_TEXT_CHARS,
+    PRELOAD_MT5_ON_STARTUP,
+)
+from input_limits import apply_input_limit
 from pipeline import run_pipeline
 from services.news_service import fetch_telugu_news
+from summarize_mt5 import get_model_status, preload_models
 from tts import text_to_speech
+from url_safety import URLSafetyError, validate_public_url
 
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -49,8 +61,11 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 
 SUMMARY_CACHE_TTL_SECONDS = 300
+TTS_CACHE_TTL_SECONDS = 900
 _SUMMARY_CACHE: dict[str, dict[str, object]] = {}
 _SUMMARY_CACHE_LOCK = Lock()
+_TTS_CACHE: dict[str, dict[str, object]] = {}
+_TTS_CACHE_LOCK = Lock()
 
 
 # ============================================================================
@@ -64,13 +79,13 @@ METHOD_DESCRIPTION = "Summarization method: 'tfidf' (extractive), 'mt5_base' (ab
 class SummarizeRequest(BaseModel):
     text: str = Field(..., description="Telugu text to summarize", min_length=10)
     method: METHOD_TYPE = Field(default="tfidf", description=METHOD_DESCRIPTION)
-    generate_audio: bool = Field(default=True, description="Whether to generate audio output")
+    generate_audio: bool = Field(default=False, description="Whether to generate audio output")
 
 
 class URLRequest(BaseModel):
     url: str = Field(..., description="URL of Telugu news article")
     method: METHOD_TYPE = Field(default="tfidf", description=METHOD_DESCRIPTION)
-    generate_audio: bool = Field(default=True, description="Whether to generate audio output")
+    generate_audio: bool = Field(default=False, description="Whether to generate audio output")
 
 
 class SummarizeResponse(BaseModel):
@@ -84,6 +99,10 @@ class SummarizeResponse(BaseModel):
     audio_url: Optional[str] = Field(None, description="URL to audio file")
     original_length: int = Field(..., description="Length of original text")
     summary_length: int = Field(..., description="Length of summary")
+    input_truncated: bool = Field(default=False, description="Whether input was truncated before summarization")
+    input_limit: int = Field(default=0, description="Maximum processed input length")
+    original_input_length: int = Field(default=0, description="Input length before truncation")
+    processed_input_length: int = Field(default=0, description="Input length after truncation")
 
 
 class ErrorResponse(BaseModel):
@@ -101,6 +120,10 @@ class LatestNewsItem(BaseModel):
     top_news_audio_url: Optional[str] = Field(None, description="Edge TTS URL for top-news mode")
     brief_audio_url: Optional[str] = Field(None, description="Edge TTS URL for brief mode")
     radio_audio_url: Optional[str] = Field(None, description="Edge TTS URL for radio mode")
+    input_truncated: bool = Field(default=False, description="Whether input was truncated before summarization")
+    input_limit: int = Field(default=0, description="Maximum processed input length")
+    original_input_length: int = Field(default=0, description="Input length before truncation")
+    processed_input_length: int = Field(default=0, description="Input length after truncation")
     # Speak frontend compatibility keys
     headline: str = Field(..., description="Headline field used by Speak UI")
     firstLine: str = Field(..., description="Short line field used by Speak UI")
@@ -145,10 +168,38 @@ def _build_audio_url(audio_path: str | None) -> str | None:
     return f"/audio/{os.path.basename(audio_path)}"
 
 
+def _tts_cache_key(text: str) -> str:
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
+
+
 def _synthesize_audio(text: str) -> str | None:
     if not text or not text.strip():
         return None
-    return text_to_speech(text)
+
+    cache_key = _tts_cache_key(text)
+    now = time.time()
+    with _TTS_CACHE_LOCK:
+        cached = _TTS_CACHE.get(cache_key)
+        if cached and now - float(cached["timestamp"]) < TTS_CACHE_TTL_SECONDS:
+            audio_path = str(cached["audio_path"])
+            if os.path.exists(audio_path):
+                logger.info("tts_cache_hit")
+                return audio_path
+        if cached:
+            _TTS_CACHE.pop(cache_key, None)
+
+    audio_path = text_to_speech(text)
+    if audio_path:
+        with _TTS_CACHE_LOCK:
+            _TTS_CACHE[cache_key] = {"timestamp": time.time(), "audio_path": audio_path}
+    return audio_path
+
+
+@app.on_event("startup")
+def optional_model_preload() -> None:
+    if PRELOAD_MT5_ON_STARTUP:
+        logger.info("startup_preload_enabled models=mt5_finetuned")
+        preload_models(("mt5_finetuned",))
 
 
 # ============================================================================
@@ -172,10 +223,30 @@ def health_check():
         "components": {
             "api": "operational",
             "tfidf": "ready",
-            "mt5_base": "ready",
-            "mt5_finetuned": "ready",
-            "tts": "ready",
+            "mt5_base": "not_checked",
+            "mt5_finetuned": "not_checked",
+            "tts": "available",
         },
+    }
+
+
+@app.get("/ready", tags=["Health"])
+def readiness_check(verify_models: bool = Query(default=False, description="Attempt to load mT5 models before reporting readiness")):
+    if verify_models:
+        preload_models(("mt5_finetuned",))
+
+    model_status = get_model_status()
+    finetuned = model_status["mt5_finetuned"]
+    transformer_ready = bool(finetuned["loaded"]) and bool(finetuned["available"])
+    return {
+        "status": "ready" if transformer_ready else "degraded",
+        "components": {
+            "api": "operational",
+            "tfidf": "ready",
+            "mt5": model_status,
+            "tts": "available",
+        },
+        "notes": "TF-IDF is ready. mT5 readiness requires the tokenizer and model to be loaded.",
     }
 
 @app.get(
@@ -187,12 +258,13 @@ def health_check():
 def latest_news(
     language: str = Query(default="te", description="Language hint (currently Telugu feed)"),
     limit: int = Query(default=5, ge=1, le=5, description="Max number of articles"),
+    generate_audio: bool = Query(default=False, description="Generate latest-news audio variants"),
 ):
     """
     Fetch Telugu RSS articles and summarize them using the existing NLP pipeline.
 
     Pipeline reuse:
-    fetch RSS -> clean text -> run_pipeline(method='mt5_finetuned', generate_audio=True)
+    fetch RSS -> clean text -> run_pipeline(method='mt5_finetuned', generate_audio=False)
     """
     try:
         overall_start = time.perf_counter()
@@ -205,7 +277,8 @@ def latest_news(
         summarize_total = 0.0
 
         for article in raw_articles[:5]:
-            article_text = clean_text(article.get("full_text", "") or article.get("text", ""))
+            raw_article_text = clean_text(article.get("full_text", "") or article.get("text", ""))
+            article_text, extraction_info = apply_input_limit(raw_article_text)
             if not article_text:
                 continue
 
@@ -224,6 +297,10 @@ def latest_news(
             executed_method = str(result.get("executed_method", result.get("method", "mt5_finetuned")))
             status = str(result.get("status", "ok"))
             fallback_reason = result.get("fallback_reason")
+            input_truncated = bool(extraction_info.input_truncated or result.get("input_truncated", False))
+            original_input_length = extraction_info.original_input_length
+            processed_input_length = int(result.get("processed_input_length", len(article_text)))
+            input_limit = int(result.get("input_limit", extraction_info.input_limit))
             summarize_elapsed = time.perf_counter() - summarize_start
             summarize_total += summarize_elapsed
             logger.info(
@@ -263,6 +340,10 @@ def latest_news(
                     "brief_text": summary,
                     "top_news_text": top_news_text,
                     "radio_text": radio_text,
+                    "input_truncated": input_truncated,
+                    "input_limit": input_limit,
+                    "original_input_length": original_input_length,
+                    "processed_input_length": processed_input_length,
                 }
             )
 
@@ -280,7 +361,7 @@ def latest_news(
                 if text:
                     tts_jobs.append((index, field_name, text))
 
-        if tts_jobs:
+        if generate_audio and tts_jobs:
             max_workers = min(8, len(tts_jobs))
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_map = {
@@ -309,6 +390,10 @@ def latest_news(
                     top_news_audio_url=tts_results.get((index, "top_news_audio_url")),
                     brief_audio_url=audio_url,
                     radio_audio_url=tts_results.get((index, "radio_audio_url")),
+                    input_truncated=item["input_truncated"],
+                    input_limit=item["input_limit"],
+                    original_input_length=item["original_input_length"],
+                    processed_input_length=item["processed_input_length"],
                     # Speak frontend compatibility payload
                     headline=item["headline"],
                     firstLine=item["firstLine"],
@@ -345,6 +430,11 @@ def summarize_text(request: SummarizeRequest):
     try:
         if not request.text.strip():
             raise HTTPException(status_code=400, detail="Text cannot be empty")
+        if len(request.text) > MAX_RAW_TEXT_CHARS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Text is too large. Maximum allowed length is {MAX_RAW_TEXT_CHARS} characters.",
+            )
 
         result = run_pipeline(
             text_or_url=request.text,
@@ -368,6 +458,10 @@ def summarize_text(request: SummarizeRequest):
             audio_url=audio_url,
             original_length=len(result["original_text"]),
             summary_length=len(result["summary"]),
+            input_truncated=result.get("input_truncated", False),
+            input_limit=result.get("input_limit", 0),
+            original_input_length=result.get("original_input_length", len(result["original_text"])),
+            processed_input_length=result.get("processed_input_length", len(result["original_text"])),
         )
 
     except ValueError as e:
@@ -391,8 +485,10 @@ def summarize_url(request: URLRequest):
     - **mt5_finetuned** – mT5 fine-tuned on Telugu news (best quality)
     """
     try:
-        if not request.url.startswith("http"):
-            raise HTTPException(status_code=400, detail="Invalid URL format")
+        try:
+            validate_public_url(request.url)
+        except URLSafetyError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
         result = run_pipeline(
             text_or_url=request.url,
@@ -416,6 +512,10 @@ def summarize_url(request: URLRequest):
             audio_url=audio_url,
             original_length=len(result["original_text"]),
             summary_length=len(result["summary"]),
+            input_truncated=result.get("input_truncated", False),
+            input_limit=result.get("input_limit", 0),
+            original_input_length=result.get("original_input_length", len(result["original_text"])),
+            processed_input_length=result.get("processed_input_length", len(result["original_text"])),
         )
 
     except ValueError as e:

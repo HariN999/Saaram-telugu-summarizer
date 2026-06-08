@@ -20,10 +20,10 @@ const resolveAudioUrl = (audioPath) => {
   return `${API_BASE_URL}${audioPath}`;
 };
 
-export const fetchLatestNews = async () => {
+export const fetchLatestNews = async (generateAudio = true) => {
   try {
     // Uses backend API only; browser never calls external providers directly.
-    const payload = await requestJson("/latest-news?language=te&limit=5");
+    const payload = await requestJson(`/latest-news?language=te&limit=5&generate_audio=${generateAudio}`);
     const news = normalizeNewsResponse(payload).map((item) => ({
       ...item,
       audioUrl: resolveAudioUrl(item.audioUrl),
@@ -31,10 +31,19 @@ export const fetchLatestNews = async () => {
       briefAudioUrl: resolveAudioUrl(item.briefAudioUrl),
       radioAudioUrl: resolveAudioUrl(item.radioAudioUrl),
     }));
+    const hasEdgeAudio = news.some(
+      (item) => item.audioUrl || item.topNewsAudioUrl || item.briefAudioUrl || item.radioAudioUrl
+    );
+    if (generateAudio && !hasEdgeAudio) {
+      throw new Error("Edge Telugu audio was not generated");
+    }
     if (news.length > 0) {
       return news;
     }
-  } catch {
+  } catch (error) {
+    if (generateAudio) {
+      throw error;
+    }
     // Fall through to deterministic local fallback.
   }
   return FALLBACK_NEWS.te;
