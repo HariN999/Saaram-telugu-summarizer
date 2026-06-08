@@ -62,10 +62,37 @@ app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 
 SUMMARY_CACHE_TTL_SECONDS = 300
 TTS_CACHE_TTL_SECONDS = 900
-_SUMMARY_CACHE: dict[str, dict[str, object]] = {}
-_SUMMARY_CACHE_LOCK = Lock()
-_TTS_CACHE: dict[str, dict[str, object]] = {}
-_TTS_CACHE_LOCK = Lock()
+
+# Free-tier optimization: Bounded LRU-style caches to prevent unbounded memory growth
+class BoundedCache:
+    """
+    Lightweight in-memory cache with max-size limit and TTL.
+    Evicts oldest (by insertion) entry when max_size is exceeded.
+    """
+    def __init__(self, max_size: int):
+        self.cache: dict[str, dict[str, object]] = {}
+        self.max_size = max_size
+        self.lock = Lock()
+    
+    def get(self, key: str) -> dict[str, object] | None:
+        with self.lock:
+            return self.cache.get(key)
+    
+    def set(self, key: str, value: dict[str, object]) -> None:
+        with self.lock:
+            self.cache[key] = value
+            if len(self.cache) > self.max_size:
+                # Remove oldest entry (Python 3.7+ dicts maintain insertion order)
+                oldest_key = next(iter(self.cache))
+                del self.cache[oldest_key]
+                logger.debug(f"bounded_cache_evict key_count={len(self.cache)}")
+    
+    def size(self) -> int:
+        with self.lock:
+            return len(self.cache)
+
+_SUMMARY_CACHE = BoundedCache(max_size=100)
+_TTS_CACHE = BoundedCache(max_size=200)
 
 
 # ============================================================================
@@ -144,12 +171,12 @@ def _summary_cache_key(text: str, method: str) -> str:
 def _get_cached_summary(text: str, method: str) -> dict[str, object] | None:
     cache_key = _summary_cache_key(text, method)
     now = time.time()
-    with _SUMMARY_CACHE_LOCK:
-        cached = _SUMMARY_CACHE.get(cache_key)
-        if cached and now - float(cached["timestamp"]) < SUMMARY_CACHE_TTL_SECONDS:
-            return dict(cached)
-        if cached:
-            _SUMMARY_CACHE.pop(cache_key, None)
+    cached = _SUMMARY_CACHE.get(cache_key)
+    if cached and now - float(cached["timestamp"]) < SUMMARY_CACHE_TTL_SECONDS:
+        return dict(cached)
+    if cached:
+        # TTL expired, let BoundedCache naturally evict
+        pass
     return None
 
 
@@ -158,8 +185,8 @@ def _set_cached_summary(text: str, method: str, result: dict[str, object]) -> No
         return
 
     cache_key = _summary_cache_key(text, method)
-    with _SUMMARY_CACHE_LOCK:
-        _SUMMARY_CACHE[cache_key] = {"timestamp": time.time(), **result}
+    _SUMMARY_CACHE.set(cache_key, {"timestamp": time.time(), **result})
+    logger.debug(f"summary_cache_size={_SUMMARY_CACHE.size()}")
 
 
 def _build_audio_url(audio_path: str | None) -> str | None:
@@ -178,20 +205,17 @@ def _synthesize_audio(text: str) -> str | None:
 
     cache_key = _tts_cache_key(text)
     now = time.time()
-    with _TTS_CACHE_LOCK:
-        cached = _TTS_CACHE.get(cache_key)
-        if cached and now - float(cached["timestamp"]) < TTS_CACHE_TTL_SECONDS:
-            audio_path = str(cached["audio_path"])
-            if os.path.exists(audio_path):
-                logger.info("tts_cache_hit")
-                return audio_path
-        if cached:
-            _TTS_CACHE.pop(cache_key, None)
+    cached = _TTS_CACHE.get(cache_key)
+    if cached and now - float(cached["timestamp"]) < TTS_CACHE_TTL_SECONDS:
+        audio_path = str(cached["audio_path"])
+        if os.path.exists(audio_path):
+            logger.info("tts_cache_hit")
+            return audio_path
 
     audio_path = text_to_speech(text)
     if audio_path:
-        with _TTS_CACHE_LOCK:
-            _TTS_CACHE[cache_key] = {"timestamp": time.time(), "audio_path": audio_path}
+        _TTS_CACHE.set(cache_key, {"timestamp": time.time(), "audio_path": audio_path})
+        logger.debug(f"tts_cache_size={_TTS_CACHE.size()}")
     return audio_path
 
 
@@ -257,7 +281,7 @@ def readiness_check(verify_models: bool = Query(default=False, description="Atte
 )
 def latest_news(
     language: str = Query(default="te", description="Language hint (currently Telugu feed)"),
-    limit: int = Query(default=5, ge=1, le=5, description="Max number of articles"),
+    limit: int = Query(default=3, ge=1, le=5, description="Max number of articles (default 3 for free-tier stability)"),
     generate_audio: bool = Query(default=False, description="Generate latest-news audio variants"),
 ):
     """
@@ -271,7 +295,11 @@ def latest_news(
         _ = language  # Kept for frontend compatibility.
         fetch_start = time.perf_counter()
         raw_articles = fetch_telugu_news(limit=limit)
-        logger.info("latest-news fetch stage completed in %.2fs", time.perf_counter() - fetch_start)
+        logger.info(
+            "latest_news_fetch_complete elapsed=%.2fs articles=%d",
+            time.perf_counter() - fetch_start,
+            len(raw_articles),
+        )
 
         prepared_items: list[dict[str, str]] = []
         summarize_total = 0.0
@@ -361,8 +389,12 @@ def latest_news(
                 if text:
                     tts_jobs.append((index, field_name, text))
 
+        logger.info("latest_news_tts_jobs_scheduled jobs=%d", len(tts_jobs))
+
         if generate_audio and tts_jobs:
-            max_workers = min(8, len(tts_jobs))
+            # Free-tier optimization: Reduce from 8 to 4 concurrent workers
+            # to minimize transient memory spikes during TTS generation (each worker ~20-30MB)
+            max_workers = min(4, len(tts_jobs))
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_map = {
                     executor.submit(_synthesize_audio, text): (index, field_name)

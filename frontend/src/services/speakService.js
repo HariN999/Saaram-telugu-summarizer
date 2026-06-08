@@ -41,8 +41,27 @@ export const fetchLatestNews = async (generateAudio = true) => {
       return news;
     }
   } catch (error) {
+    // Free-tier optimization: Graceful degradation for Speak mode
+    // If audio generation fails due to memory pressure, retry without audio
     if (generateAudio) {
-      throw error;
+      console.warn("Audio generation failed, retrying without audio:", error);
+      try {
+        const payload = await requestJson(`/latest-news?language=te&limit=5&generate_audio=false`);
+        const news = normalizeNewsResponse(payload).map((item) => ({
+          ...item,
+          audioUrl: null,
+          topNewsAudioUrl: null,
+          briefAudioUrl: null,
+          radioAudioUrl: null,
+        }));
+        if (news.length > 0) {
+          console.info("Speak mode degraded to text-only due to backend memory pressure");
+          return news;
+        }
+      } catch (fallbackError) {
+        console.error("Audio fallback also failed:", fallbackError);
+        // Fall through to static fallback
+      }
     }
     // Fall through to deterministic local fallback.
   }

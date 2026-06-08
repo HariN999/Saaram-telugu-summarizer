@@ -47,6 +47,8 @@ MAX_MT5_INPUT_CHARS = int(os.getenv("MAX_MT5_INPUT_CHARS", "2500"))
 MAX_URL_CONTENT_BYTES = int(os.getenv("MAX_URL_CONTENT_BYTES", "2000000"))
 URL_REQUEST_TIMEOUT_SECONDS = float(os.getenv("URL_REQUEST_TIMEOUT_SECONDS", "8"))
 URL_MAX_REDIRECTS = int(os.getenv("URL_MAX_REDIRECTS", "3"))
+# FREE-TIER OPTIMIZATION: Keep preload disabled by default for Render 512MB tier
+# Set to true only on paid tiers (2GB+) to eliminate cold-start latency
 PRELOAD_MT5_ON_STARTUP = _get_bool_env("PRELOAD_MT5_ON_STARTUP", default=False)
 
 # Generation Settings (new section)

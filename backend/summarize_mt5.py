@@ -92,11 +92,13 @@ def _load_base_model():
             _base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL_NAME)
             _base_model.eval()
             _base_load_error = None
-            logger.info("transformer_load_success model=mt5_base elapsed=%.2fs", time.perf_counter() - start)
+            elapsed = time.perf_counter() - start
+            logger.info("transformer_load_success model=mt5_base elapsed=%.2fs", elapsed)
         except Exception as exc:
             _base_tokenizer = None
             _base_model = None
             _base_load_error = _classify_transformer_error(exc)
+            logger.warning("transformer_load_failed model=mt5_base error=%s", _base_load_error, exc_info=True)
             raise
 
 
@@ -122,11 +124,13 @@ def _load_finetuned_model():
             )
             _finetuned_model.eval()
             _finetuned_load_error = None
-            logger.info("transformer_load_success model=mt5_finetuned elapsed=%.2fs", time.perf_counter() - start)
+            elapsed = time.perf_counter() - start
+            logger.info("transformer_load_success model=mt5_finetuned elapsed=%.2fs", elapsed)
         except Exception as exc:
             _finetuned_tokenizer = None
             _finetuned_model = None
             _finetuned_load_error = _classify_transformer_error(exc)
+            logger.warning("transformer_load_failed model=mt5_finetuned error=%s", _finetuned_load_error, exc_info=True)
             raise
 
 

@@ -105,11 +105,20 @@ function Speak() {
         return;
       }
 
+      // Free-tier optimization: Graceful text-only display when audio unavailable
+      // Instead of error, allow viewing text summaries without audio
       playbackEnabledRef.current = false;
       setIsPlaying(false);
-      setError("Premium Telugu audio is not ready for this bulletin. Please refresh and try again.");
+      setLoadingStatus("Audio unavailable, showing text-only bulletin (free-tier)");
+      // Don't set error - just show status and continue to next item
+      setTimeout(() => {
+        const nextIndex = index + 1;
+        if (playbackEnabledRef.current && nextIndex < newsData.length) {
+          speakNews(nextIndex);
+        }
+      }, 2000);
     },
-    [newsData, playUrl, selectedMode, setIsPlaying],
+    [newsData, playUrl, selectedMode, setIsPlaying, setLoadingStatus],
   );
 
   const handleFetchNews = useCallback(async () => {

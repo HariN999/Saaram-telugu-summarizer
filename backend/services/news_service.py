@@ -36,12 +36,45 @@ RSS_CONTENT_TYPES = (
 
 logger = logging.getLogger(__name__)
 
+# Free-tier optimization: Bounded article cache
+class BoundedArticleCache:
+    """Lightweight cache for extracted article text with max-size limit."""
+    def __init__(self, max_size: int):
+        self.cache: dict[str, dict[str, Any]] = {}
+        self.max_size = max_size
+        self.lock = Lock()
+    
+    def get(self, url: str) -> str | None:
+        if not url:
+            return None
+        now = time.time()
+        with self.lock:
+            cached = self.cache.get(url)
+            if cached and now - cached["timestamp"] < ARTICLE_CACHE_TTL_SECONDS:
+                return cached["text"]
+            if cached:
+                # TTL expired, let cache naturally evict
+                pass
+        return None
+    
+    def set(self, url: str, text: str) -> None:
+        if not url or not text:
+            return
+        with self.lock:
+            self.cache[url] = {
+                "timestamp": time.time(),
+                "text": text,
+            }
+            if len(self.cache) > self.max_size:
+                oldest_key = next(iter(self.cache))
+                del self.cache[oldest_key]
+                logger.debug(f"article_cache_evict size={len(self.cache)}")
+
 _NEWS_CACHE: dict[str, Any] = {
     "timestamp": 0.0,
     "articles": [],
 }
-_ARTICLE_CACHE: dict[str, dict[str, Any]] = {}
-_ARTICLE_CACHE_LOCK = Lock()
+_ARTICLE_CACHE = BoundedArticleCache(max_size=50)
 
 
 def _strip_html(value: str) -> str:
@@ -51,28 +84,11 @@ def _strip_html(value: str) -> str:
 
 
 def _get_cached_article_text(article_url: str) -> str | None:
-    if not article_url:
-        return None
-
-    now = time.time()
-    with _ARTICLE_CACHE_LOCK:
-        cached = _ARTICLE_CACHE.get(article_url)
-        if cached and now - cached["timestamp"] < ARTICLE_CACHE_TTL_SECONDS:
-            return cached["text"]
-        if cached:
-            _ARTICLE_CACHE.pop(article_url, None)
-    return None
+    return _ARTICLE_CACHE.get(article_url)
 
 
 def _set_cached_article_text(article_url: str, text: str) -> None:
-    if not article_url or not text:
-        return
-
-    with _ARTICLE_CACHE_LOCK:
-        _ARTICLE_CACHE[article_url] = {
-            "timestamp": time.time(),
-            "text": text,
-        }
+    _ARTICLE_CACHE.set(article_url, text)
 
 
 def _extract_article_text(article_url: str, fallback_text: str) -> str:
