@@ -2,7 +2,7 @@
  * API Service for Telugu News Summarization
  */
 
-const DEFAULT_API_BASE_URL = "https://automated-telugu-text-summarization-and-s2gz.onrender.com";
+const DEFAULT_API_BASE_URL = "https://harin999-telugu-summarizer-backend.hf.space";
 const API_BASE_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
 class APIError extends Error {

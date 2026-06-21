@@ -1,3 +1,13 @@
+---
+title: Automated Telugu Text Summarization
+emoji: 📰
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Automated Telugu Text Summarization & Speech Generation
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
