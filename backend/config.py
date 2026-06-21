@@ -20,6 +20,7 @@ def _get_cors_origins() -> list[str]:
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://automated-telugu-text-summarization.vercel.app",
     ]
 
 
@@ -34,7 +35,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Model Settings
 MT5_BASE_MODEL = "csebuetnlp/mT5_multilingual_XLSum"
-MT5_FINETUNED_PATH = os.path.join(MODEL_DIR, "mt5-telugu-finetuned")
+MT5_FINETUNED_PATH = os.path.join(MODEL_DIR, "mt5-telugu-news-finetuned")
 
 # Summarization Settings
 MAX_INPUT_LENGTH = 512
@@ -47,7 +48,7 @@ MAX_MT5_INPUT_CHARS = int(os.getenv("MAX_MT5_INPUT_CHARS", "2500"))
 MAX_URL_CONTENT_BYTES = int(os.getenv("MAX_URL_CONTENT_BYTES", "2000000"))
 URL_REQUEST_TIMEOUT_SECONDS = float(os.getenv("URL_REQUEST_TIMEOUT_SECONDS", "8"))
 URL_MAX_REDIRECTS = int(os.getenv("URL_MAX_REDIRECTS", "3"))
-# FREE-TIER OPTIMIZATION: Keep preload disabled by default for Render 512MB tier
+# FREE-TIER OPTIMIZATION: Keep preload disabled by default for constrained free tiers
 # Set to true only on paid tiers (2GB+) to eliminate cold-start latency
 PRELOAD_MT5_ON_STARTUP = _get_bool_env("PRELOAD_MT5_ON_STARTUP", default=False)
 
