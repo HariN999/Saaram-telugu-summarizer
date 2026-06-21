@@ -77,16 +77,22 @@ For reliability and hardening features implemented on this stack, see [docs/RELI
 ├── Dockerfile        # Backend container packaging
 └── requirements.txt  # Backend Python dependencies
 ```
-
 ## 📸 Screenshots
 
-| Home Page | Text Summarization | URL Summarization |
-| --- | --- | --- |
-| ![Home](screenshots/Home.png) | ![Text](screenshots/Text.png) | ![URL](screenshots/URL.png) |
+### Home Page
+![Home](screenshots/Home.png)
 
-| Speak News (Radio Mode) | Swagger API Docs |
-| --- | --- |
-| ![Speak](screenshots/Speak.png) | ![Docs](screenshots/Docs.png) |
+### Text Summarization
+![Text](screenshots/Text.png)
+
+### URL Summarization
+![URL](screenshots/URL.png)
+
+### Speak News (Radio Mode)
+![Speak](screenshots/Speak.png)
+
+### API Docs
+![Docs](screenshots/Docs.png)
 
 ## 📊 Evaluation Snapshot
 
