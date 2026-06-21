@@ -1,214 +1,342 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, Zap, Globe } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Sparkles, FileText, Link2, ArrowRight, Radio } from "lucide-react";
 import ArchStep from "../components/ArchStep";
 
 const MotionDiv = motion.div;
 const MotionH1 = motion.h1;
 const MotionP = motion.p;
 
-const HOME_FEATURES = [
-  {
-    icon: Globe,
-    label: "Multi-Source",
-    desc: "Scrapes Eenadu, BBC Telugu & user input",
-    accentClass: "home-feature-indigo",
-  },
-  {
-    icon: Sparkles,
-    label: "AI-Powered",
-    desc: "mT5 & TF-IDF for Telugu summarization",
-    accentClass: "home-feature-violet",
-  },
-  {
-    icon: Zap,
-    label: "Voice Output",
-    desc: "High-quality Text-to-Speech in Telugu",
-    accentClass: "home-feature-fuchsia",
-  },
-];
-
-function HeroSection({ onGetStarted }) {
+function HeroIllustration() {
   return (
-    <>
-      {/* Home hero now uses dedicated theme tokens for light/dark parity. */}
-      <section className="home-hero-section relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-24">
-        <div className="home-hero-bg absolute inset-0" />
-        <div className="noise-overlay" />
+    <div className="relative w-full h-full flex items-center justify-center pointer-events-none select-none">
+      {/* Decorative ambient glows */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="h-[280px] w-[280px] rounded-full bg-gradient-to-tr from-[var(--primary)]/10 to-[var(--secondary)]/15 blur-[60px] animate-pulse" />
+      </div>
 
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <MotionDiv
-            animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.6, 0.4] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -left-48 -top-48 h-[500px] w-[500px] rounded-full bg-indigo-400/10 dark:bg-indigo-600/20 blur-[100px]"
+      {/* Floating Document Card (Input) */}
+      <MotionDiv
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-8 left-4 z-20 w-[220px] rounded-2xl border border-[var(--border)] bg-[var(--surface)]/85 p-4 shadow-xl backdrop-blur-md"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-2 w-2 rounded-full bg-[var(--secondary)] animate-ping" />
+          <div className="h-1.5 w-16 rounded bg-[var(--text-muted)]/20" />
+        </div>
+        <div className="space-y-2">
+          {/* Mock Telugu text lines */}
+          <div className="h-3 w-5/6 rounded bg-[var(--text-muted)]/30" />
+          <div className="h-2 w-full rounded bg-[var(--text-muted)]/15" />
+          <div className="h-2 w-full rounded bg-[var(--text-muted)]/15" />
+          <div className="h-2 w-4/5 rounded bg-[var(--text-muted)]/15" />
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="h-1.5 w-12 rounded bg-[var(--text-muted)]/20" />
+          <span className="text-[10px] font-mono text-[var(--secondary)] font-bold">ARTICLE INPUT</span>
+        </div>
+      </MotionDiv>
+
+      {/* Pulsing Connector Flow */}
+      <div className="absolute top-1/2 left-[45%] -translate-y-1/2 z-10 w-24 h-12 hidden lg:block">
+        <svg className="w-full h-full text-[var(--primary)]/25" fill="none" viewBox="0 0 100 50">
+          <path
+            d="M0,25 C30,25 70,25 100,25"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeDasharray="6 6"
+            strokeDashoffset="0"
+            className="animate-[dash_8s_linear_infinite]"
           />
-          <MotionDiv
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 13, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute -bottom-48 -right-48 h-[500px] w-[500px] rounded-full bg-violet-400/10 dark:bg-violet-700/20 blur-[100px]"
-          />
-          <MotionDiv
-            animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.35, 0.2] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-            className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-fuchsia-400/10 dark:bg-fuchsia-600/15 blur-[80px]"
-          />
+        </svg>
+      </div>
+
+      {/* Floating Summary & Speech Card */}
+      <MotionDiv
+        animate={{ y: [0, 10, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute bottom-6 right-4 z-20 w-[240px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xl backdrop-blur-md"
+      >
+        <div className="flex items-center justify-between mb-3.5 border-b border-[var(--border)] pb-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--primary)]">mT5 Radio AI Summary</span>
+          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         </div>
 
-        <div className="home-grid-overlay absolute inset-0" />
+        {/* Bullet points summaries */}
+        <div className="space-y-2.5 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--primary)] font-bold">·</span>
+            <div className="h-2 w-full rounded bg-[var(--text-primary)]/10" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--primary)] font-bold">·</span>
+            <div className="h-2 w-11/12 rounded bg-[var(--text-primary)]/10" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--primary)] font-bold">·</span>
+            <div className="h-2 w-5/6 rounded bg-[var(--text-primary)]/10" />
+          </div>
+        </div>
 
-        <MotionDiv
-          className="relative z-10 mx-auto max-w-5xl text-center"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <MotionDiv
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="home-pill-badge mb-10 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Powered by mT5 &amp; TF-IDF</span>
-          </MotionDiv>
-
-          <MotionH1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.7 }}
-            className="mb-6 font-display"
-          >
-            <span className="home-title block text-5xl font-bold leading-tight sm:text-6xl md:text-7xl lg:text-8xl">
-              AI that speaks
-            </span>
-            <span className="block text-5xl font-bold leading-tight sm:text-6xl md:text-7xl lg:text-8xl">
-              <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-violet-400 dark:to-fuchsia-400">
-                తెలుగు
-              </span>
-            </span>
-          </MotionH1>
-
-          <MotionP
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45, duration: 0.6 }}
-            className="home-subtitle mx-auto mb-16 max-w-2xl text-lg sm:text-xl"
-          >
-            Transform Telugu content into insights. Summarize articles, generate
-            speech, and extract meaning with state-of-the-art language AI.
-          </MotionP>
-
-          <MotionDiv
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mb-24 flex flex-wrap items-center justify-center gap-4"
-          >
-            <button
-              onClick={onGetStarted}
-              className="home-btn-primary group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full px-8 py-3.5 text-sm font-semibold"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-
-            <a
-              href="#learn-more"
-              className="home-btn-secondary inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-semibold"
-            >
-              Learn More
-              <Zap className="h-4 w-4" />
-            </a>
-          </MotionDiv>
-
-          <MotionDiv
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75 }}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-          >
-            {HOME_FEATURES.map((feature, i) => (
+        {/* Mock Waveform Audio Player */}
+        <div className="rounded-xl bg-[var(--surface-muted)] p-2.5 flex items-center gap-3 border border-[var(--border)] shadow-inner">
+          <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--background)] shadow-md shadow-[var(--primary)]/20">
+            <svg className="h-4.5 w-4.5 fill-current ml-0.5" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+          <div className="flex-1 flex items-end gap-0.5 h-6">
+            {/* Animating Waveform bars */}
+            {[8, 14, 18, 12, 16, 20, 14, 10, 16, 12].map((height, i) => (
               <MotionDiv
-                key={feature.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.85 + i * 0.08 }}
-                className={`home-feature-card ${feature.accentClass} group rounded-2xl p-5 text-left`}
-              >
-                <div className="home-feature-icon mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl">
-                  <feature.icon className="h-4 w-4" />
-                </div>
-                <div className="home-feature-title mb-1 text-base font-semibold">{feature.label}</div>
-                <div className="home-feature-desc text-sm leading-relaxed">{feature.desc}</div>
-              </MotionDiv>
+                key={i}
+                animate={{ height: [height * 0.4, height, height * 0.4] }}
+                transition={{ duration: 1.2 + i * 0.1, repeat: Infinity, ease: "easeInOut" }}
+                className="w-1 rounded-full bg-[var(--primary)]/60 origin-bottom"
+                style={{ height }}
+              />
             ))}
-          </MotionDiv>
-        </MotionDiv>
-      </section>
-
-      {/* Architecture section keeps existing dark look, while light mode gets cleaner card contrast. */}
-      <section id="learn-more" className="home-arch-section relative overflow-hidden px-6 py-28">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <MotionDiv
-            animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-indigo-400/15 dark:bg-indigo-500/30 blur-[80px]"
-          />
-          <MotionDiv
-            animate={{ scale: [1, 1.25, 1], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-violet-400/10 dark:bg-violet-500/25 blur-[80px]"
-          />
+          </div>
         </div>
+      </MotionDiv>
+    </div>
+  );
+}
 
-        <div className="relative z-10 mx-auto max-w-3xl">
-          <div className="mb-6 flex justify-center">
-            <span className="home-pill-badge rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest">
-              How It Works
-            </span>
+function HeroSection() {
+  return (
+    <div className="relative min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)]">
+      {/* Background Grid Overlay */}
+      <div className="home-hero-bg absolute inset-0" />
+      <div className="noise-overlay" />
+      <div className="home-grid-overlay absolute inset-0" />
+
+      {/* Decorative ambient glows */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <MotionDiv
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -left-48 top-12 h-[500px] w-[500px] rounded-full bg-[var(--secondary)]/10 blur-[100px]"
+        />
+        <MotionDiv
+          animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute -right-48 bottom-12 h-[500px] w-[500px] rounded-full bg-[var(--primary)]/5 blur-[120px]"
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-7xl px-6 pt-28 pb-32">
+        {/* Hero Header Section with Staggered Entrance Animations (<600ms) */}
+        <div className="grid gap-12 lg:grid-cols-12 items-center mb-28 text-center lg:text-left">
+          {/* Left Column: Title, Tagline & CTAs */}
+          <div className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left">
+            <MotionDiv
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="home-pill-badge mb-6 inline-flex items-center gap-2 rounded-full px-5 py-1.5 text-xs font-semibold uppercase tracking-wider"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Powered by mT5 + Speech AI</span>
+            </MotionDiv>
+
+            <MotionH1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.05, ease: "easeOut" }}
+              className="mb-2 font-display"
+            >
+              <span className="block text-6xl font-black leading-none tracking-tight text-[var(--text-primary)] sm:text-7xl md:text-8xl">
+                Saaram
+              </span>
+            </MotionH1>
+
+            <MotionDiv
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.10, ease: "easeOut" }}
+              className="mt-4 mb-3 font-display"
+            >
+              <span className="block text-2xl font-extrabold tracking-tight text-[var(--primary)] sm:text-3xl md:text-4xl">
+                Telugu News, Summarized &amp; Spoken.
+              </span>
+            </MotionDiv>
+
+            <MotionP
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.15, ease: "easeOut" }}
+              className="mx-auto lg:mx-0 mb-8 max-w-2xl text-sm sm:text-base leading-relaxed text-[var(--text-secondary)]"
+            >
+              The essence of Telugu news articles, instantly transformed into concise, readable summaries and natural voice bulletins.
+            </MotionP>
+
+            {/* Call-to-Actions (Staggered load @ 0.20s) */}
+            <MotionDiv
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.20, ease: "easeOut" }}
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-4"
+            >
+              <Link
+                to="/summarize"
+                className="app-button app-button-primary rounded-xl px-7 py-3 text-sm font-bold uppercase tracking-wider shadow-lg"
+              >
+                Get Started
+              </Link>
+              <button
+                onClick={() => {
+                  document.getElementById("capabilities")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="app-button app-button-secondary rounded-xl px-7 py-3 text-sm font-bold uppercase tracking-wider"
+              >
+                See How It Works
+              </button>
+            </MotionDiv>
           </div>
 
-          <h2 className="home-title mb-4 text-center font-display text-4xl font-bold">
-            Architecture Overview
-          </h2>
-          <p className="home-subtitle mb-14 text-center text-sm">
-            Five deliberate steps from raw content to polished audio summary.
-          </p>
+          {/* Right Column: Hero Illustration Animation */}
+          <div className="lg:col-span-5 hidden lg:block relative h-[380px] w-full">
+            <HeroIllustration />
+          </div>
+        </div>
 
-          <div className="grid gap-4">
+        {/* Scroll Target for Secondary Button */}
+        <div id="capabilities" className="scroll-mt-24" />
+
+        {/* Feature Cards Grid (Staggered CTA Cards, fully loaded in ~550ms) */}
+        <div className="grid gap-6 sm:grid-cols-3 mb-16">
+          <MotionDiv
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.25, ease: "easeOut" }}
+            className="app-card flex flex-col p-6 h-full border border-[var(--border)] bg-[var(--surface)]"
+          >
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--secondary)]/10 border border-[var(--secondary)]/20">
+              <FileText className="h-5 w-5 text-[var(--secondary)]" />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Text Summarizer</h3>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-6 flex-1">
+              Summarize Telugu text into concise key insights.
+            </p>
+            <Link
+              to="/summarize"
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
+            >
+              Summarize Text
+              <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </MotionDiv>
+
+          <MotionDiv
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.29, ease: "easeOut" }}
+            className="app-card flex flex-col p-6 h-full border border-[var(--border)] bg-[var(--surface)]"
+          >
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--secondary)]/10 border border-[var(--secondary)]/20">
+              <Link2 className="h-5 w-5 text-[var(--secondary)]" />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">URL News Fetcher</h3>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-6 flex-1">
+              Extract and summarize Telugu news articles instantly.
+            </p>
+            <Link
+              to="/url"
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
+            >
+              Extract Article
+              <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </MotionDiv>
+
+          <MotionDiv
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.33, ease: "easeOut" }}
+            className="app-card flex flex-col p-6 h-full border border-[var(--border)] bg-[var(--surface)]"
+          >
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+              <Radio className="h-5 w-5 text-[var(--primary)]" />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Saaram Radio</h3>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-6 flex-1">
+              Listen to AI-generated Telugu radio bulletins.
+            </p>
+            <Link
+              to="/speak"
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
+            >
+              Listen to Radio
+              <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </MotionDiv>
+        </div>
+
+        {/* NLP Engine Pipeline section */}
+        <section className="mb-16">
+          <div className="mb-5 text-center">
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">
+              Architecture Overview
+            </span>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl font-display">
+              NLP Engine Pipeline
+            </h2>
+            <p className="mt-1.5 text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
+              How raw Telugu news is parsed, normalized, summarized, and synthesized in five distinct processing phases.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             <ArchStep
               step="01"
               icon="search"
               title="Content Extraction"
-              desc="BeautifulSoup extracts Telugu news articles."
+              desc="Safely extracts clean article text from Telugu news sources."
+              connectorDirection="right"
             />
             <ArchStep
               step="02"
               icon="broom"
-              title="Text Cleaning"
-              desc="Normalization removes noise and prepares Telugu text for processing."
+              title="Telugu Normalization"
+              desc="Cleans Unicode noise and removes boilerplate content."
+              connectorDirection="both"
             />
             <ArchStep
               step="03"
               icon="filter"
-              title="Extractive Summarization"
-              desc="TF-IDF identifies important sentences quickly and accurately."
+              title="Extractive Weights (TF-IDF)"
+              desc="Fast extractive summarization using keyword importance."
+              connectorDirection="down"
+              isConnectorDashed={true}
             />
+
+            {/* Empty space in Row 2 Col 1 to align steps 04 and 05 directly below 02 and 03 */}
+            <div className="hidden md:block" />
+
             <ArchStep
               step="04"
               icon="brain"
-              title="Abstractive AI Model"
-              desc="mT5 generates fluent, coherent Telugu summaries using deep learning."
+              title="Abstractive mT5 Model"
+              desc="Generates fluent abstractive Telugu summaries."
+              connectorDirection="right"
+              isConnectorDashed={true}
             />
             <ArchStep
               step="05"
               icon="volume-up"
-              title="Speech Generation"
-              desc="Edge TTS converts the final summary into natural-sounding Telugu audio."
+              title="Edge Speech Synthesis (TTS)"
+              desc="Converts summaries into natural Telugu voice bulletins."
+              connectorDirection="none"
+              isOptional={true}
             />
           </div>
-        </div>
-      </section>
-    </>
+        </section>
+
+
+      </div>
+    </div>
   );
 }
 

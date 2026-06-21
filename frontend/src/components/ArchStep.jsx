@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, Filter, Brain, Volume2, Brush } from "lucide-react";
+import { Search, Filter, Brain, Volume2, Brush, ChevronRight, ChevronDown } from "lucide-react";
 
 const MotionDiv = motion.div;
 
@@ -12,50 +12,137 @@ const ICONS = {
 };
 
 const STEP_COLORS = {
-  "01": { dot: "bg-indigo-500", text: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10", border: "border-indigo-200/60 dark:border-indigo-500/20" },
-  "02": { dot: "bg-violet-500", text: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-500/10", border: "border-violet-200/60 dark:border-violet-500/20" },
-  "03": { dot: "bg-purple-500", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10", border: "border-purple-200/60 dark:border-purple-500/20" },
-  "04": { dot: "bg-fuchsia-500", text: "text-fuchsia-600 dark:text-fuchsia-400", bg: "bg-fuchsia-50 dark:bg-fuchsia-500/10", border: "border-fuchsia-200/60 dark:border-fuchsia-500/20" },
-  "05": { dot: "bg-pink-500", text: "text-pink-600 dark:text-pink-400", bg: "bg-pink-50 dark:bg-pink-500/10", border: "border-pink-200/60 dark:border-pink-500/20" },
+  "01": { dot: "bg-[var(--secondary)]", text: "text-[var(--secondary)]", bg: "bg-[var(--secondary)]/10", border: "border-[var(--secondary)]/20" },
+  "02": { dot: "bg-[var(--secondary)]", text: "text-[var(--secondary)]", bg: "bg-[var(--secondary)]/10", border: "border-[var(--secondary)]/20" },
+  "03": { dot: "bg-[var(--primary)]", text: "text-[var(--primary)]", bg: "bg-[var(--primary)]/10", border: "border-[var(--primary)]/20" },
+  "04": { dot: "bg-[var(--primary)]", text: "text-[var(--primary)]", bg: "bg-[var(--primary)]/10", border: "border-[var(--primary)]/20" },
+  "05": { dot: "bg-[var(--secondary)]", text: "text-[var(--secondary)]", bg: "bg-[var(--secondary)]/10", border: "border-[var(--secondary)]/20" },
 };
 
-function ArchStep({ step, icon, title, desc, sectionId }) {
+function ArchStep({ step, icon, title, desc, sectionId, connectorDirection = "none", isConnectorDashed = false, isOptional = false }) {
   const Icon = ICONS[icon];
   const colors = STEP_COLORS[step] || STEP_COLORS["01"];
+  const isEngine = step === "03" || step === "04";
 
   return (
     <MotionDiv
       id={sectionId}
-      initial={{ opacity: 0, x: -16 }}
-      whileInView={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45 }}
-      className="group relative flex items-start gap-5 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 shadow-[0_8px_20px_rgba(15,23,42,0.08)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)] dark:shadow-[0_10px_30px_rgba(2,6,23,0.45)] dark:hover:shadow-[0_14px_34px_rgba(2,6,23,0.55)]"
+      className={`group relative flex flex-col items-center text-center rounded-3xl border border-[var(--border)] bg-[var(--surface)]/65 p-8 shadow-xl backdrop-blur-sm transition-all duration-300 hover:border-[var(--primary)]/35 h-full min-h-[270px] lg:min-h-[290px]
+        ${isEngine 
+          ? "hover:-translate-y-3 hover:shadow-[0_0_30px_rgba(216,155,43,0.15)]" 
+          : "hover:-translate-y-2 hover:shadow-2xl"
+        }`}
     >
-      {/* Step number badge */}
-      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border ${colors.bg} ${colors.border}`}>
-        <span className={`font-mono text-xs font-semibold ${colors.text}`}>{step}</span>
+      {/* Top row with step number, icon, and optional/engine badge */}
+      <div className="w-full flex items-center justify-between mb-5">
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)]/40 shadow-inner group-hover:border-[var(--primary)]/30 group-hover:bg-[var(--primary)]/5 transition-all duration-300">
+          <span className={`font-mono text-xl font-black ${colors.text}`}>{step}</span>
+          {Icon && (
+            <div className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg border ${colors.border} ${colors.bg} shadow-md`}>
+              <Icon className={`h-3.5 w-3.5 ${colors.text}`} />
+            </div>
+          )}
+        </div>
+
+        {isEngine && (
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary)] border border-[var(--primary)]/20 px-2.5 py-1 rounded-full bg-[var(--primary)]/5 shadow-sm">
+            {step === "03" ? "Extractive Engine" : "Abstractive Engine"}
+          </span>
+        )}
+
+        {isOptional && (
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] border border-[var(--border)] px-2.5 py-1 rounded-full bg-[var(--surface-muted)]/50 shadow-sm">
+            Optional Stage
+          </span>
+        )}
       </div>
 
-      {/* Icon */}
-      {Icon && (
-        <div className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${colors.bg} ${colors.border} border`}>
-          <Icon className={`h-5 w-5 ${colors.text}`} />
-        </div>
-      )}
-
-      {/* Text */}
-      <div className="flex-1 pt-1">
-        <h4 className="mb-1 text-sm font-semibold text-[var(--text-primary)]">
+      {/* Text Content */}
+      <div className="flex flex-col items-center flex-1">
+        <h4 className={`mb-2 tracking-tight text-[var(--text-primary)] font-display transition-colors group-hover:text-[var(--primary)]
+          ${isEngine ? "text-xl font-black" : "text-lg font-bold"}`}>
           {title}
         </h4>
-        <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+        <p className="text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)]">
           {desc}
         </p>
       </div>
 
-      {/* Hover accent line */}
-      <div className={`absolute left-0 top-4 bottom-4 w-0.5 rounded-full ${colors.dot} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+      {/* Floating visual connector line/arrow (Horizontal right connector) */}
+      {(connectorDirection === "right" || connectorDirection === "both") && (
+        <svg 
+          className="absolute left-full top-1/2 -translate-y-1/2 w-8 h-4 hidden lg:block text-[var(--border)] group-hover:text-[var(--primary)]/60 transition-colors pointer-events-none z-20" 
+          fill="none" 
+          viewBox="0 0 32 16"
+        >
+          <path 
+            d="M0 8h28" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeDasharray={isConnectorDashed ? "4 4" : "none"} 
+          />
+          <path 
+            d="M24 4l4 4-4 4" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+          />
+        </svg>
+      )}
+
+      {/* Floating visual connector line/arrow (Vertical down connector) */}
+      {(connectorDirection === "down" || connectorDirection === "both") && (
+        <svg 
+          className="absolute top-full left-1/2 -translate-x-1/2 w-4 h-8 hidden lg:block text-[var(--border)] group-hover:text-[var(--primary)]/60 transition-colors pointer-events-none z-20" 
+          fill="none" 
+          viewBox="0 0 16 32"
+        >
+          <path 
+            d="M8 0v28" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeDasharray={isConnectorDashed ? "4 4" : "none"} 
+          />
+          <path 
+            d="M4 24l4 4 4-4" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+          />
+        </svg>
+      )}
+
+      {/* Mobile-only visual connector (Vertical down connector for mobile layout) */}
+      {connectorDirection !== "none" && (
+        <svg 
+          className="absolute top-full left-1/2 -translate-x-1/2 w-4 h-8 flex lg:hidden text-[var(--border)] group-hover:text-[var(--primary)]/60 transition-colors pointer-events-none z-20" 
+          fill="none" 
+          viewBox="0 0 16 32"
+        >
+          <path 
+            d="M8 0v28" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeDasharray={isConnectorDashed ? "4 4" : "none"}
+          />
+          <path 
+            d="M4 24l4 4 4-4" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+          />
+        </svg>
+      )}
+
+      {/* Hover top accent line */}
+      <div className={`absolute left-8 right-8 top-0 h-0.5 rounded-full ${colors.dot} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
     </MotionDiv>
   );
 }

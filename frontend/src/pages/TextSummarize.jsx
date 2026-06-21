@@ -1,54 +1,37 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Sparkles, Loader2, FileText, Volume2,
-  Download, Copy, CheckCircle2, ChevronDown, AlertCircle,
-} from "lucide-react";
+import { Sparkles, FileText, Volume2, Copy, CheckCircle2, AlertCircle } from "lucide-react";
 import APIService from "../services/api";
+import AudioPlayer from "../components/AudioPlayer";
+import SkeletonLoader from "../components/SkeletonLoader";
 
 const MotionDiv = motion.div;
-const MotionSpan = motion.span;
 
 const SAMPLE_TEXTS = [
   "తెలుగు భాష ద్రావిడ భాషల కుటుంబానికి చెందిన భాష. ఇది ఆంధ్రప్రదేశ్ మరియు తెలంగాణ రాష్ట్రాల అధికార భాష. తెలుగు భాష చాలా ప్రాచీనమైనది మరియు గొప్ప సాహిత్య సంప్రదాయం కలిగి ఉంది. దీనిని అమృతభాష అని కూడా పిలుస్తారు. తెలుగు భాషలో అనేక ప్రాచీన గ్రంథాలు, కావ్యాలు మరియు సాహిత్య రచనలు ఉన్నాయి. నన్నయ, తిక్కన, ఎర్రన వంటి మహా కవులు తెలుగు సాహిత్యానికి ఎనలేని సేవ చేశారు.",
   "భారతదేశం అనేక సంస్కృతులు మరియు సంప్రదాయాలకు నిలయం. ఈ దేశంలో వివిధ మతాలు, భాషలు మరియు కళలు సమృద్ధిగా ఉన్నాయి. భారతీయ నాగరికత ప్రపంచంలోనే అత్యంత ప్రాచీనమైనది. సింధూ నాగరికత నుండి నేటి ఆధునిక భారతదేశం వరకు ఈ దేశం అనేక మార్పులను చూసింది. భారతదేశ స్వాతంత్ర్య పోరాటం ప్రపంచానికే ఆదర్శంగా నిలిచింది.",
-  "హైదరాబాద్ తెలంగాణ రాష్ట్రానికి రాజధాని. ఇది భారతదేశంలోని ముఖ్యమైన సాంకేతిక కేంద్రాలలో ఒకటి. ఈ నగరం దాని చారిత్రక స్మారక చిహ్నాలకు, బిరియానీకి మరియు ముత్యాల మార్కెట్‌కు ప్రసిద్ధి చెందింది. చార్మినార్, గోల్కొండ కోట మరియు హుస్సేన్ సాగర్ ఇక్కడ ప్రసిద్ధ పర్యాటక ప్రదేశాలు. హైదరాబాద్ IT పరిశ్రమలో ప్రముఖ పాత్ర పోషిస్తోంది.",
+  "హైదరాబాద్ తెలంగాణ రాష్ట్రానికి రాజధాని. ఇది భారతదేశంలోని ముఖ్యమైన సాంకేతిక కేంద్రాలలో ఒకటి. ఈ నగరం దాని చారిత్రక స్మారక చిహ్నాలకు, బిరియానీకి మరియు ముత్యాల మార్కెట్‌కు ప్రసిద్ధి చెందింది. చార్మినార్, గోల్కొండ కోట మరియు హుస్సేన్ సాగర్ ఇక్కడ ప్రసిద్ధ పర్యాటక ప్రదేశాలు. హైదరాబాద్ IT పరిశ్రమలో ప్రముఖ పాత్ర పోషిస్తోంది."
 ];
 
 const SUMMARIZATION_METHODS = [
   {
     id: "tfidf",
-    name: "TF-IDF",
-    badge: "Fast",
-    type: "Extractive",
-    description: "Picks the most important sentences directly from the article.",
-    emoji: "⚡",
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-500/10",
-    border: "border-amber-200 dark:border-amber-500/20",
+    name: "Fast",
+    model: "TF-IDF Model",
+    description: "Extractive sentences selector"
   },
   {
     id: "mt5_base",
-    name: "mT5 Base",
-    badge: "AI",
-    type: "Abstractive",
-    description: "Generates fluent summaries using the multilingual XLSum base model.",
-    emoji: "🤖",
-    color: "text-indigo-600 dark:text-indigo-400",
-    bg: "bg-indigo-50 dark:bg-indigo-500/10",
-    border: "border-indigo-200 dark:border-indigo-500/20",
+    name: "Balanced",
+    model: "mT5 Base Model",
+    description: "Multilingual transformer"
   },
   {
     id: "mt5_finetuned",
-    name: "mT5 Fine-tuned",
-    badge: "Experimental",
-    type: "Abstractive",
-    description: "Fine-tuned on Telugu dataset",
-    emoji: "✨",
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-50 dark:bg-violet-500/10",
-    border: "border-violet-200 dark:border-violet-500/20",
-  },
+    name: "High Quality",
+    model: "mT5 Fine-tuned",
+    description: "Telugu specialist model"
+  }
 ];
 
 function TextSummarize() {
@@ -56,15 +39,11 @@ function TextSummarize() {
   const [summary, setSummary] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState("");
   const [error, setError] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("tfidf");
-  const [showMethodDropdown, setShowMethodDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [usedMethod, setUsedMethod] = useState("");
-  const [generateAudio, setGenerateAudio] = useState(false);
-
-  const currentMethod = SUMMARIZATION_METHODS.find((m) => m.id === selectedMethod);
+  const [generateAudio, setGenerateAudio] = useState(true);
 
   const loadSampleText = () => {
     const randomIndex = Math.floor(Math.random() * SAMPLE_TEXTS.length);
@@ -78,30 +57,21 @@ function TextSummarize() {
 
   const handleSummarize = async () => {
     if (!inputText.trim()) {
-      setError("Please enter some text to summarize");
+      setError("Please enter some Telugu text to summarize.");
       return;
     }
     setIsProcessing(true);
-    setProcessingStatus(
-      generateAudio
-        ? `Processing with ${currentMethod.name} and generating audio...`
-        : `Processing with ${currentMethod.name}...`
-    );
     setError("");
     setSummary("");
     setAudioUrl("");
     setUsedMethod("");
     try {
       const result = await APIService.summarizeText(inputText, selectedMethod, generateAudio);
-      setProcessingStatus(
-        result.audio_url ? "Summary and audio generated successfully!" : "Summary generated successfully!"
-      );
       setSummary(result.summary);
       setUsedMethod(result.executed_method || result.method);
       if (result.audio_url) {
         setAudioUrl(result.audio_url);
       }
-      setTimeout(() => setProcessingStatus(""), 2000);
     } catch (err) {
       setError(err.message || "An error occurred while processing your request");
       console.error("Error:", err);
@@ -115,7 +85,6 @@ function TextSummarize() {
     setSummary("");
     setAudioUrl("");
     setError("");
-    setProcessingStatus("");
     setUsedMethod("");
   };
 
@@ -134,114 +103,78 @@ function TextSummarize() {
   const usedMethodObj = SUMMARIZATION_METHODS.find((m) => m.id === usedMethod);
 
   return (
-    <div className="app-page">
-      <div className="mx-auto max-w-7xl">
-
+    <div className="app-page text-[var(--text-primary)]">
+      <div className="mx-auto max-w-6xl">
+        
         {/* Header */}
         <MotionDiv
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-10 text-center"
         >
-          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] shadow-lg shadow-[var(--primary)]/25">
+            <Sparkles className="h-7 w-7 text-[var(--background)]" />
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-[var(--text-primary)] font-display">
             Telugu Text Summarization
           </h1>
           <p className="text-sm text-[var(--text-secondary)]">
-            Summarize Telugu text using AI-powered algorithms
+            Summarize Telugu news copy and synthesize spoken bulletins
           </p>
         </MotionDiv>
 
-        {/* Method Selector */}
+        {/* Method Selector Pills */}
         <MotionDiv
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex justify-center"
+          className="mb-8"
         >
-          <div className="relative">
-            <button
-              onClick={() => setShowMethodDropdown(!showMethodDropdown)}
-              disabled={isProcessing}
-              className={`flex items-center gap-3 rounded-xl border px-5 py-3 shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 ${currentMethod.bg} ${currentMethod.border}`}
-            >
-              <span className="text-lg">{currentMethod.emoji}</span>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-semibold ${currentMethod.color}`}>
-                    {currentMethod.name}
-                  </span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${currentMethod.bg} ${currentMethod.color} border ${currentMethod.border}`}>
-                    {currentMethod.badge}
-                  </span>
-                </div>
-                <div className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                  {currentMethod.type}
-                </div>
-              </div>
-              <ChevronDown
-                className={`ml-2 h-4 w-4 transition-transform duration-200 ${currentMethod.color} ${showMethodDropdown ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {showMethodDropdown && (
-                <MotionDiv
-                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                  className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--card-bg)] shadow-xl"
-                  style={{ minWidth: "280px", backdropFilter: 'blur(12px)' }}
+          <span className="block text-center text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-3">
+            Choose Summarization Method
+          </span>
+          <div className="mx-auto max-w-3xl grid gap-3 sm:grid-cols-3">
+            {SUMMARIZATION_METHODS.map((method) => {
+              const isSelected = selectedMethod === method.id;
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => setSelectedMethod(method.id)}
+                  disabled={isProcessing}
+                  className={`group flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all duration-200 ${
+                    isSelected
+                      ? "border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--text-primary)]"
+                      : "border-[var(--border)] bg-[var(--surface-muted)]/30 text-[var(--text-secondary)] hover:border-[var(--primary)]/35 hover:text-[var(--text-primary)] disabled:opacity-40"
+                  }`}
                 >
-                  {SUMMARIZATION_METHODS.map((method) => (
-                    <button
-                      key={method.id}
-                      onClick={() => {
-                        setSelectedMethod(method.id);
-                        setShowMethodDropdown(false);
-                      }}
-                      className={`w-full border-b border-[var(--border-color)] p-4 text-left transition-colors last:border-b-0 ${
-                        selectedMethod === method.id ? `${method.bg}` : "hover:bg-[var(--bg-secondary)]"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="text-xl mt-0.5">{method.emoji}</span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={`font-semibold text-sm ${method.color}`}>{method.name}</span>
-                            <span className={`text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${method.bg} ${method.color} border ${method.border}`}>
-                              {method.badge}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                            {method.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </MotionDiv>
-              )}
-            </AnimatePresence>
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-[var(--primary)]" : "text-[var(--text-primary)]"}`}>
+                    {method.name}
+                  </span>
+                  <span className="text-[11px] font-semibold text-[var(--text-primary)]/90 mt-0.5">
+                    {method.model}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-secondary)]/70 leading-normal">
+                    {method.description}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </MotionDiv>
 
         {/* Main Panels */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          
           {/* Input Panel */}
           <MotionDiv
-            className="app-card flex flex-col rounded-2xl p-6"
+            className="app-card flex flex-col p-6 rounded-2xl"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.45 }}
           >
-            {/* Panel header */}
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
-                  <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+                  <FileText className="h-4.5 w-4.5 text-[var(--primary)]" />
                 </div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   Input Text
@@ -250,7 +183,7 @@ function TextSummarize() {
               <button
                 onClick={loadSampleText}
                 disabled={isProcessing}
-                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:opacity-50 animated-underline"
+                className="text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-85 transition-colors disabled:opacity-50"
               >
                 Load sample
               </button>
@@ -258,24 +191,27 @@ function TextSummarize() {
 
             <textarea
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="తెలుగు వచనం ఇక్కడ టైప్ చేయండి..."
+              onChange={(e) => {
+                setInputText(e.target.value);
+                setError("");
+              }}
+              placeholder="తెలుగు వచనం ఇక్కడ టైప్ చేయండి లేదా అతికించండి (Type or paste Telugu text here)..."
               disabled={isProcessing}
-              className="app-textarea min-h-[380px] flex-1 resize-none font-sans text-sm leading-relaxed disabled:cursor-not-allowed disabled:opacity-50"
+              className="app-textarea min-h-[340px] flex-1 resize-none text-sm leading-relaxed"
               dir="auto"
             />
 
-            <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] px-4 py-3 transition-colors hover:border-indigo-300 dark:hover:border-indigo-500/40">
+            <label className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 px-4 py-3 transition-colors hover:border-[var(--primary)]/25">
               <span className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
-                  <Volume2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+                  <Volume2 className="h-4 w-4 text-[var(--primary)]" />
                 </span>
                 <span>
                   <span className="block text-sm font-semibold text-[var(--text-primary)]">
-                    Generate Telugu Audio
+                    Generate Telugu Radio bulletin
                   </span>
-                  <span className="block text-xs text-[var(--text-secondary)]">
-                    Adds Edge TTS MP3 after the summary
+                  <span className="block text-[11px] text-[var(--text-secondary)]">
+                    Synthesizes Edge TTS MP3 after summary
                   </span>
                 </span>
               </span>
@@ -284,36 +220,21 @@ function TextSummarize() {
                 checked={generateAudio}
                 onChange={(event) => setGenerateAudio(event.target.checked)}
                 disabled={isProcessing}
-                className="h-4 w-4 accent-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-4.5 w-4.5 rounded border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] focus:ring-[var(--primary)]"
               />
             </label>
 
             {/* Footer row */}
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-xs text-[var(--text-secondary)]">
-                  {charCount.toLocaleString()} chars
-                </span>
-                <AnimatePresence>
-                  {isProcessing && processingStatus && (
-                    <MotionSpan
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="text-xs text-indigo-600 dark:text-indigo-400"
-                    >
-                      {processingStatus}
-                    </MotionSpan>
-                  )}
-                </AnimatePresence>
-              </div>
+            <div className="mt-4 flex items-center justify-between gap-3 pt-3 border-t border-[var(--border)]/80">
+              <span className="font-mono text-xs text-[var(--text-secondary)] font-semibold">
+                {charCount.toLocaleString()} characters
+              </span>
 
               <div className="flex items-center gap-2">
-                {inputText && (
+                {inputText && !isProcessing && (
                   <button
                     onClick={handleClear}
-                    disabled={isProcessing}
-                    className="app-button app-button-secondary rounded-lg px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 hover:border-red-300 hover:text-red-600 dark:hover:border-red-500/40 dark:hover:text-red-400"
+                    className="app-button app-button-secondary rounded-xl px-4 py-2 text-xs"
                   >
                     Clear
                   </button>
@@ -321,33 +242,24 @@ function TextSummarize() {
                 <button
                   onClick={handleSummarize}
                   disabled={isDisabled}
-                  className="app-button app-button-primary rounded-lg px-5 py-2 text-xs disabled:hover:scale-100"
+                  className="app-button app-button-primary rounded-xl px-5 py-2 text-xs font-bold uppercase tracking-wider"
                 >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Summarize
-                    </>
-                  )}
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Summarize
                 </button>
               </div>
             </div>
 
-            {/* Error */}
+            {/* Error alerts */}
             <AnimatePresence>
               {error && (
                 <MotionDiv
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 flex items-center gap-2 overflow-hidden rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2.5 text-xs text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20"
+                  className="mt-3 flex items-center gap-2 overflow-hidden rounded-xl border border-red-500/20 bg-red-500/5 px-3.5 py-2.5 text-xs text-red-400"
                 >
-                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   {error}
                 </MotionDiv>
               )}
@@ -356,22 +268,21 @@ function TextSummarize() {
 
           {/* Output Panel */}
           <MotionDiv
-            className="app-card flex flex-col rounded-2xl p-6"
+            className="app-card flex flex-col p-6 rounded-2xl"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.45 }}
           >
-            {/* Panel header */}
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20">
-                  <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+                  <Sparkles className="h-4.5 w-4.5 text-[var(--primary)]" />
                 </div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Summary
+                  Summary Output
                 </h3>
                 {usedMethodObj && (
-                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide border ${usedMethodObj.bg} ${usedMethodObj.color} ${usedMethodObj.border}`}>
+                  <span className="rounded-full border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--primary)]">
                     {usedMethodObj.name}
                   </span>
                 )}
@@ -379,12 +290,12 @@ function TextSummarize() {
               {summary && (
                 <button
                   onClick={() => copyToClipboard(summary)}
-                  className="app-button app-button-secondary rounded-lg px-3 py-1.5 text-xs"
+                  className="app-button app-button-secondary rounded-xl px-3 py-1.5 text-xs"
                 >
                   {copied ? (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                      <span className="text-emerald-400 font-bold">Copied!</span>
                     </>
                   ) : (
                     <>
@@ -396,64 +307,36 @@ function TextSummarize() {
               )}
             </div>
 
-            <div className="min-h-[380px] flex-1 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4">
-              {summary ? (
-                <div className="space-y-4">
-                  <p className="text-sm leading-relaxed text-[var(--text-primary)]" dir="auto">
+            <div className="min-h-[340px] flex-1 flex flex-col">
+              {isProcessing ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <SkeletonLoader generateAudio={generateAudio} method={selectedMethod} />
+                </div>
+              ) : summary ? (
+                <div className="flex-1 flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-4">
+                  <p className="text-sm sm:text-base leading-relaxed text-[var(--text-primary)] flex-1 font-medium" dir="auto">
                     {summary}
                   </p>
 
                   {audioUrl && (
-                    <MotionDiv
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 rounded-xl border border-[var(--border-color)] bg-[var(--card-bg)] p-4 space-y-3"
-                    >
-                      <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <Volume2 className="h-3.5 w-3.5" />
-                        Audio generated
-                      </div>
-                      <audio controls className="mt-3 w-full">
-                        <source src={APIService.getAudioUrl(audioUrl)} type="audio/mpeg" />
-                      </audio>
-                      <a
-                        href={APIService.getAudioUrl(audioUrl)}
-                        download="summary_audio.mp3"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Download Audio
-                      </a>
-                    </MotionDiv>
+                    <div className="mt-2">
+                      <AudioPlayer src={APIService.getAudioUrl(audioUrl)} headline="Text Summary Segment" />
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="flex h-full min-h-[340px] items-center justify-center">
-                  {isProcessing ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="relative">
-                        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-                        <div className="absolute inset-0 h-8 w-8 animate-ping-slow rounded-full border-2 border-indigo-400/30" />
-                      </div>
-                      <p className="text-xs font-medium text-[var(--text-secondary)]">
-                        {generateAudio ? "Generating summary and audio..." : "Generating summary..."}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)]">
-                        <Sparkles className="h-4 w-4 text-[var(--text-secondary)]" />
-                      </div>
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Your summary will appear here after processing
-                      </p>
-                    </div>
-                  )}
+                <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-[var(--border)] rounded-xl p-8 text-center bg-[var(--surface-muted)]/10">
+                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-[var(--text-secondary)]">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Your generated abstractive summary will display here
+                  </p>
                 </div>
               )}
             </div>
           </MotionDiv>
+
         </div>
       </div>
     </div>
