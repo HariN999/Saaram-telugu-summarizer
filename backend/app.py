@@ -563,10 +563,14 @@ def summarize_url(request: URLRequest):
     tags=["Audio"],
 )
 def get_audio(filename: str):
-    audio_path = os.path.join(AUDIO_DIR, filename)
+    safe_filename = os.path.basename(filename)
+    audio_path = os.path.abspath(os.path.join(AUDIO_DIR, safe_filename))
+    audio_root = os.path.abspath(AUDIO_DIR)
+    if os.path.commonpath([audio_root, audio_path]) != audio_root:
+        raise HTTPException(status_code=400, detail="Invalid audio filename")
     if not os.path.exists(audio_path):
         raise HTTPException(status_code=404, detail="Audio file not found")
-    return FileResponse(audio_path, media_type="audio/mpeg", filename=filename)
+    return FileResponse(audio_path, media_type="audio/mpeg", filename=safe_filename)
 
 
 if __name__ == "__main__":

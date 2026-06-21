@@ -13,7 +13,7 @@ pinned: false
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
 ![React](https://img.shields.io/badge/React-Vite-61DAFB)
 ![Transformers](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E)
-![Docker](https://img.shields.io/badge/Docker-Render-2496ED)
+![Docker](https://img.shields.io/badge/Docker-HF%20Spaces%20SDK-FFD21E)
 ![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000)
 
 Practical low-resource Telugu NLP system for news summarization and speech generation, with deployment-focused reliability improvements for constrained hosting.
@@ -25,9 +25,9 @@ The system supports direct Telugu text input, URL-based article extraction, extr
 ## 🚀 Live Demo
 
 - Frontend: https://automated-telugu-text-summarization.vercel.app/
-- Backend API: https://automated-telugu-text-summarization-and-s2gz.onrender.com
-- API Docs: https://automated-telugu-text-summarization-and-s2gz.onrender.com/docs
-- Health Check: https://automated-telugu-text-summarization-and-s2gz.onrender.com/health
+- Backend API: https://harin999-telugu-summarizer-backend.hf.space
+- API Docs: https://harin999-telugu-summarizer-backend.hf.space/docs
+- Health Check: https://harin999-telugu-summarizer-backend.hf.space/health
 
 For the smoothest demo on free hosting, start with the `TF-IDF` method. Transformer requests may take longer because the model is loaded lazily and Speak mode is intentionally heavier than text-only summarize paths.
 
@@ -65,7 +65,7 @@ Note: TTS audio output is supported, but playback may not be audible in the reco
 - Runtime model selection through API payloads
 - Telugu neural speech generation with MP3 playback
 - Full-stack integration with React and FastAPI
-- Dockerized backend deployed on Render
+- Dockerized backend deployed on Hugging Face Spaces
 - Vite frontend deployed on Vercel
 - Research-backed architecture with evaluation metrics
 
@@ -84,7 +84,7 @@ React + Vite Frontend (Vercel)
         |
         | VITE_API_URL
         v
-FastAPI Backend (Render Docker)
+FastAPI Backend (Hugging Face Spaces Docker SDK)
         |
         | extract -> clean -> summarize -> optional TTS
         v
@@ -130,7 +130,7 @@ The backend is designed to keep the API responsive even when transformer loading
 | NLP | Hugging Face Transformers, PyTorch, SentencePiece, scikit-learn |
 | Summarization | TF-IDF, mT5 multilingual XLSum |
 | Speech | Edge TTS |
-| Deployment | Render Docker backend, Vercel frontend |
+| Deployment | Hugging Face Spaces (Docker SDK) backend, Vercel frontend |
 | Packaging | Docker, requirements.txt, npm |
 
 ## 📂 Project Structure
@@ -255,8 +255,8 @@ Run locally:
 ```bash
 docker run --rm \
   --name telugu-news-api \
-  -p 10000:10000 \
-  -e PORT=10000 \
+  -p 7860:7860 \
+  -e PORT=7860 \
   -e CORS_ORIGIN_REGEX='https://.*\.vercel\.app' \
   telugu-news-api
 ```
@@ -264,19 +264,19 @@ docker run --rm \
 Test:
 
 ```bash
-curl http://localhost:10000/health
+curl http://localhost:7860/health
 ```
 
 ## 🌐 Deployment
 
-### Backend: Render
+### Backend: Hugging Face Spaces
 
-Use the existing `Dockerfile`.
+Use the existing `Dockerfile` with the Hugging Face Spaces Docker SDK. The free CPU tier provides 16GB RAM, which gives the mT5 and TTS paths substantially more headroom than the previous 512MB Render deployment.
 
 Recommended environment variables:
 
 ```env
-PORT=10000
+PORT=7860
 DEBUG=false
 CORS_ORIGIN_REGEX=https://.*\.vercel\.app
 CORS_ORIGINS=https://automated-telugu-text-summarization.vercel.app
@@ -301,7 +301,7 @@ Output Directory: dist
 Environment variable:
 
 ```env
-VITE_API_URL=https://automated-telugu-text-summarization-and-s2gz.onrender.com
+VITE_API_URL=https://harin999-telugu-summarizer-backend.hf.space
 ```
 
 ## 🔧 Reliability & Hardening
@@ -317,8 +317,8 @@ This deployment includes practical production hardening for constrained infrastr
 
 ## ⚠️ Deployment Notes
 
-- Render free tier can cold start after inactivity.
-- Preload is disabled by default on the 512MB tier to keep baseline memory pressure low.
+- Hugging Face Spaces can cold start after inactivity.
+- Preload is disabled by default to keep baseline memory pressure low; enable it only when the selected Space hardware has enough headroom.
 - Speak/Radio mode is heavier than text/URL summarization because it combines RSS ingestion, mT5 inference, and Edge TTS generation.
 - Edge TTS generation can add latency, especially for latest-news audio batches.
 - Bounded in-memory caches limit memory growth on long-running instances.
@@ -329,7 +329,7 @@ This deployment includes practical production hardening for constrained infrastr
 
 ## 📦 Model Notes
 
-The fine-tuned Telugu mT5 model is included only for local research and development workflows. The public deployment intentionally avoids shipping the 3.6GB finetuned checkpoint to keep the Render free-tier deployment practical and to reduce memory pressure.
+The fine-tuned Telugu mT5 model is included only for local research and development workflows. The public deployment intentionally avoids shipping the 3.6GB finetuned checkpoint to keep the GitHub repository and Docker image practical while reducing deployment size and startup pressure.
 
 Runtime behavior:
 
