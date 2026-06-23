@@ -265,7 +265,7 @@ function HeroSection() {
               Listen to AI-generated Telugu radio bulletins.
             </p>
             <Link
-              to="/speak"
+              to="/radio"
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
             >
               Listen to Radio

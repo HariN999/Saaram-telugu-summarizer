@@ -136,6 +136,26 @@ def _extract_article_text(article_url: str, fallback_text: str) -> str:
             if "మీడియా ప్లేబ్యాక్" in p_text:
                 continue
 
+            # Drop social media follow / subscribe prompts
+            if "ఫాలో అవ్వండి" in p_text and "సబ్‌స్క్రైబ్ చేయండి" in p_text:
+                continue
+
+            # Drop publisher credits (BBC Collective Newsroom attribution line)
+            if "కలెక్టివ్ న్యూస్‌రూమ్ ప్రచురణ" in p_text:
+                continue
+
+            # Drop external site disclaimers
+            if "ఇతర వెబ్‌సైట్లలో సమాచారానికి" in p_text and "బాధ్యత వహించదు" in p_text:
+                continue
+
+            # Drop related articles link blocks
+            if "ఇవి కూడా చదవండి" in p_text or "ఇది కూడా చదవండి" in p_text:
+                continue
+
+            # Drop copyright lines
+            if p_text.startswith("©"):
+                continue
+
             valid_paragraphs.append(p_text)
 
         article_text = " ".join(valid_paragraphs).strip()

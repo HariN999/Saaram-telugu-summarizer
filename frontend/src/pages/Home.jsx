@@ -5,7 +5,7 @@ function Home() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate("/speak");
+    navigate("/radio");
   };
 
   return <HeroSection onGetStarted={handleGetStarted} />;

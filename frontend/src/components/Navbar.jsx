@@ -10,7 +10,7 @@ function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const navItems = [
     { path: "/", label: "Home", icon: Home },
-    { path: "/speak", label: "Radio", icon: Radio },
+    { path: "/radio", label: "Radio", icon: Radio },
     { path: "/url", label: "URL", icon: Link2 },
     { path: "/summarize", label: "Summarize", icon: FileText },
   ];
