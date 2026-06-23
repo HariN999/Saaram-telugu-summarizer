@@ -89,7 +89,7 @@ For reliability and hardening features implemented on this stack, see [docs/RELI
 ![URL](screenshots/URL.png)
 
 ### Speak News (Radio Mode)
-![Speak](screenshots/Speak.png)
+![Speak](screenshots/Radio.png)
 
 ### API Docs
 ![Docs](screenshots/Docs.png)

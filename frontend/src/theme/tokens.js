@@ -1,40 +1,47 @@
-export const THEME_STORAGE_KEY = "telugu-ai-theme";
+export const THEME_STORAGE_KEY = "saaram-theme";
 
-// Reusable semantic tokens used across the app.
+// Palette: Ochre & Steel Blue (Semantic Theme Values)
+const darkThemeTokens = {
+  background: "#0B1120",
+  surface: "#111827",
+  "surface-muted": "#1F2937",
+  primary: "#D89B2B", // Ochre brand accent
+  secondary: "#4A6FA5", // Steel Blue brand accent
+  "text-primary": "#F8FAFC",
+  "text-secondary": "#CBD5E1",
+  "text-muted": "#94A3B8",
+  border: "#334155",
+  "focus-ring": "rgba(216, 155, 43, 0.45)",
+  "shadow-soft": "0 10px 24px rgba(0, 0, 0, 0.6)",
+  "shadow-lift": "0 16px 42px rgba(0, 0, 0, 0.8)",
+  "bg-gradient": "radial-gradient(ellipse at 15% 0%, rgba(216, 155, 43, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 85% 85%, rgba(74, 111, 165, 0.04) 0%, transparent 50%), #0B1120",
+  "card-bg": "rgba(17, 24, 39, 0.65)",
+  "btn-primary-text": "#08080c",
+};
+
+const lightThemeTokens = {
+  background: "#F8FAFC",
+  surface: "#FFFFFF",
+  "surface-muted": "#F1F5F9",
+  primary: "#B45309", // Darker Ochre for accessible text contrast (> 4.5:1)
+  secondary: "#4A6FA5", // Steel Blue brand accent
+  "text-primary": "#0F172A",
+  "text-secondary": "#475569",
+  "text-muted": "#64748B",
+  border: "#E2E8F0",
+  "focus-ring": "rgba(216, 155, 43, 0.35)",
+  "shadow-soft": "0 4px 16px rgba(15, 23, 42, 0.05)",
+  "shadow-lift": "0 10px 32px rgba(15, 23, 42, 0.08)",
+  "bg-gradient": "radial-gradient(ellipse at 15% 0%, rgba(216, 155, 43, 0.04) 0%, transparent 50%), radial-gradient(ellipse at 85% 85%, rgba(74, 111, 165, 0.03) 0%, transparent 50%), #F8FAFC",
+  "card-bg": "rgba(255, 255, 255, 0.75)",
+  "btn-primary-text": "#ffffff",
+};
+
 export const THEME_TOKENS = {
-  light: {
-    background: "#f5f7fb",
-    surface: "#ffffff",
-    "surface-muted": "#eef2f8",
-    primary: "#4f46e5",
-    secondary: "#0ea5a4",
-    "text-primary": "#0f172a",
-    "text-secondary": "#475569",
-    border: "#dbe3ef",
-    "focus-ring": "rgba(79, 70, 229, 0.35)",
-    "shadow-soft": "0 8px 24px rgba(15, 23, 42, 0.08)",
-    "shadow-lift": "0 14px 38px rgba(15, 23, 42, 0.12)",
-    "bg-gradient": "radial-gradient(ellipse at 20% 0%, rgba(79,70,229,0.09) 0%, transparent 45%), radial-gradient(ellipse at 85% 100%, rgba(14,165,164,0.07) 0%, transparent 50%), #f5f7fb",
-  },
-  dark: {
-    background: "#0b1221",
-    surface: "#131d30",
-    "surface-muted": "#17243a",
-    primary: "#818cf8",
-    secondary: "#2dd4bf",
-    "text-primary": "#e2e8f0",
-    "text-secondary": "#9aa9c2",
-    border: "#25324a",
-    "focus-ring": "rgba(129, 140, 248, 0.45)",
-    "shadow-soft": "0 10px 24px rgba(2, 6, 23, 0.4)",
-    "shadow-lift": "0 16px 42px rgba(2, 6, 23, 0.55)",
-    "bg-gradient": "radial-gradient(ellipse at 15% 0%, rgba(79,70,229,0.22) 0%, transparent 45%), radial-gradient(ellipse at 90% 100%, rgba(45,212,191,0.1) 0%, transparent 55%), #0b1221",
-  },
+  light: lightThemeTokens,
+  dark: darkThemeTokens,
 };
 
 export const resolveSystemTheme = () => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "dark"; // Force dark mode as the default/system theme
 };

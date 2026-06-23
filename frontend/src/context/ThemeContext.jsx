@@ -18,7 +18,7 @@ const applyThemeTokens = (theme) => {
   root.style.setProperty("--accent-primary", "var(--primary)");
   root.style.setProperty("--accent-secondary", "var(--secondary)");
   root.style.setProperty("--border-color", "var(--border)");
-  root.style.setProperty("--card-bg", "var(--surface)");
+  root.style.setProperty("--card-bg", tokens["card-bg"] || "var(--surface)");
   root.style.setProperty("--card-border", "var(--border)");
   root.style.setProperty("--shadow-card", "var(--shadow-soft)");
 
