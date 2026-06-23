@@ -111,12 +111,40 @@ def _extract_article_text(article_url: str, fallback_text: str) -> str:
         for tag in soup(["script", "style"]):
             tag.decompose()
 
-        paragraphs = [
-            p.get_text(" ", strip=True)
-            for p in soup.find_all("p")
-            if p.get_text(" ", strip=True)
-        ]
-        article_text = " ".join(paragraphs).strip()
+        # Remove BBC section-boundary markers BEFORE text extraction.
+        # These appear as <p id="end-of-*"> elements (e.g. id="end-of-recommendations",
+        # id="end-of-article-links-block") and are NOT article content.
+        for p in soup.find_all("p", id=lambda pid: pid and pid.startswith("end-of-")):
+            p.decompose()
+
+        valid_paragraphs = []
+        for p in soup.find_all("p"):
+            p_text = p.get_text(" ", strip=True)
+            if not p_text:
+                continue
+
+            # Belt-and-suspenders: drop any remaining paragraph whose text
+            # starts with "End of" (catches edge cases where the id is absent).
+            if p_text.lower().startswith("end of"):
+                continue
+
+            # Drop photo-source / caption lines
+            if "ఫొటో సోర్స్" in p_text or "ఫోటో సోర్స్" in p_text or "చిత్రం శీర్షిక" in p_text:
+                continue
+
+            # Drop media-playback warnings
+            if "మీడియా ప్లేబ్యాక్" in p_text:
+                continue
+
+            valid_paragraphs.append(p_text)
+
+        article_text = " ".join(valid_paragraphs).strip()
+
+        # Regex safety net: strip any residual "End of <word>" fragments that
+        # may have slipped through structural filtering (e.g. via inline elements).
+        import re as _re
+        article_text = _re.sub(r'End of \S+', '', article_text).strip()
+
         final_text = article_text or fallback_text
         _set_cached_article_text(article_url, final_text)
         logger.info(

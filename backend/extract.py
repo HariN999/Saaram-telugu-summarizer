@@ -87,6 +87,12 @@ def extract_text(text_or_url: str) -> str:
             for script in soup(["script", "style"]):
                 script.decompose()
 
+            # Remove BBC section-boundary marker paragraphs BEFORE extraction.
+            # These are <p id="end-of-*"> elements used as accessibility anchors
+            # (e.g. id="end-of-recommendations", id="end-of-article-links-block").
+            for p in soup.find_all("p", id=lambda pid: pid and pid.startswith("end-of-")):
+                p.decompose()
+
             # Get text from paragraphs
             paragraphs = soup.find_all("p")
             valid_paragraphs = []
@@ -135,6 +141,11 @@ def extract_text(text_or_url: str) -> str:
                 valid_paragraphs.append(p_text)
 
             article_text = " ".join(valid_paragraphs)
+
+            # Regex safety net: strip any residual "End of <word>" fragments that
+            # may have slipped through structural filtering (e.g. inline elements
+            # or future BBC DOM changes without the id attribute).
+            article_text = re.sub(r'End of \S+', '', article_text).strip()
 
             if not article_text:
                 # Fallback to all text
