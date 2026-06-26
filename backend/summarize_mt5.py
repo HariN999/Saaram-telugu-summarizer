@@ -13,6 +13,8 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from summarize_tfidf import tfidf_summarize
 
+device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+
 logger = logging.getLogger(__name__)
 _MT5_FALLBACK_MESSAGE: ContextVar[Optional[str]] = ContextVar("_MT5_FALLBACK_MESSAGE", default=None)
 _MT5_FALLBACK_REASON: ContextVar[Optional[str]] = ContextVar("_MT5_FALLBACK_REASON", default=None)
@@ -89,7 +91,7 @@ def _load_base_model():
         logger.info("transformer_load_start model=mt5_base source=%s", BASE_MODEL_NAME)
         try:
             _base_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, use_fast=False)
-            _base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL_NAME)
+            _base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL_NAME).to(device)
             _base_model.eval()
             _base_load_error = None
             elapsed = time.perf_counter() - start
@@ -121,7 +123,7 @@ def _load_finetuned_model():
             )
             _finetuned_model = AutoModelForSeq2SeqLM.from_pretrained(
                 FINETUNED_MODEL, local_files_only=FINETUNED_LOCAL_ONLY
-            )
+            ).to(device)
             _finetuned_model.eval()
             _finetuned_load_error = None
             elapsed = time.perf_counter() - start
@@ -139,6 +141,7 @@ def _run_summarize(tokenizer, model, text, max_length=128, min_length=30,
     if not text or not text.strip():
         return ""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
         outputs = model.generate(
             **inputs,

@@ -15,6 +15,12 @@ const SAMPLE_URLS = [
 
 const SUMMARIZATION_METHODS = [
   {
+    id: "auto",
+    name: "Auto",
+    model: "Adaptive Router",
+    description: "Intelligently selects best model"
+  },
+  {
     id: "tfidf",
     name: "Fast",
     model: "TF-IDF Model",
@@ -39,7 +45,7 @@ function PasteUrl() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState("tfidf");
+  const [selectedMethod, setSelectedMethod] = useState("auto");
   const [copied, setCopied] = useState(false);
   const [generateAudio, setGenerateAudio] = useState(true);
 
@@ -69,6 +75,8 @@ function PasteUrl() {
         audioUrl: response.audio_url || null,
         originalUrl: url,
         method: response.executed_method || response.method,
+        routingReason: response.routing_reason || "",
+        latencySeconds: response.latency_seconds ?? null,
       });
     } catch (err) {
       setError(err.message || "Failed to process URL. Please check the URL and try again.");
@@ -126,9 +134,10 @@ function PasteUrl() {
           <span className="block text-center text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-3">
             Choose Summarization Method
           </span>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             {SUMMARIZATION_METHODS.map((method) => {
               const isSelected = selectedMethod === method.id;
+              const isAuto = method.id === "auto";
               return (
                 <button
                   key={method.id}
@@ -141,7 +150,7 @@ function PasteUrl() {
                   }`}
                 >
                   <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-[var(--primary)]" : "text-[var(--text-primary)]"}`}>
-                    {method.name}
+                    {method.name}{isAuto && " ✦"}
                   </span>
                   <span className="text-[11px] font-semibold text-[var(--text-primary)]/90 mt-0.5">
                     {method.model}
@@ -309,6 +318,22 @@ function PasteUrl() {
                       {result.summary}
                     </p>
                   </div>
+
+                  {/* Routing insight (auto mode) */}
+                  {result.routingReason && (
+                    <div className="rounded-lg border border-[var(--primary)]/15 bg-[var(--primary)]/5 px-3 py-2 text-[10px] text-[var(--text-secondary)] leading-relaxed">
+                      <span className="font-bold text-[var(--primary)] uppercase tracking-wider mr-1.5">Router →</span>
+                      {result.routingReason}
+                    </div>
+                  )}
+
+                  {/* Latency */}
+                  {result.latencySeconds !== null && result.latencySeconds !== undefined && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Completed in <strong>{result.latencySeconds.toFixed(2)}s</strong></span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Custom Audio Player */}

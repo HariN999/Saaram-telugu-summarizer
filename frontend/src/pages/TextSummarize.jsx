@@ -15,6 +15,12 @@ const SAMPLE_TEXTS = [
 
 const SUMMARIZATION_METHODS = [
   {
+    id: "auto",
+    name: "Auto",
+    model: "Adaptive Router",
+    description: "Intelligently selects best model"
+  },
+  {
     id: "tfidf",
     name: "Fast",
     model: "TF-IDF Model",
@@ -40,10 +46,12 @@ function TextSummarize() {
   const [audioUrl, setAudioUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState("tfidf");
+  const [selectedMethod, setSelectedMethod] = useState("auto");
   const [copied, setCopied] = useState(false);
   const [usedMethod, setUsedMethod] = useState("");
   const [generateAudio, setGenerateAudio] = useState(true);
+  const [routingReason, setRoutingReason] = useState("");
+  const [latencySeconds, setLatencySeconds] = useState(null);
 
   const loadSampleText = () => {
     const randomIndex = Math.floor(Math.random() * SAMPLE_TEXTS.length);
@@ -52,6 +60,8 @@ function TextSummarize() {
     setAudioUrl("");
     setError("");
     setUsedMethod("");
+    setRoutingReason("");
+    setLatencySeconds(null);
     setCopied(false);
   };
 
@@ -65,10 +75,14 @@ function TextSummarize() {
     setSummary("");
     setAudioUrl("");
     setUsedMethod("");
+    setRoutingReason("");
+    setLatencySeconds(null);
     try {
       const result = await APIService.summarizeText(inputText, selectedMethod, generateAudio);
       setSummary(result.summary);
       setUsedMethod(result.executed_method || result.method);
+      setRoutingReason(result.routing_reason || "");
+      setLatencySeconds(result.latency_seconds ?? null);
       if (result.audio_url) {
         setAudioUrl(result.audio_url);
       }
@@ -86,6 +100,8 @@ function TextSummarize() {
     setAudioUrl("");
     setError("");
     setUsedMethod("");
+    setRoutingReason("");
+    setLatencySeconds(null);
   };
 
   const copyToClipboard = async (text) => {
@@ -132,9 +148,10 @@ function TextSummarize() {
           <span className="block text-center text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-3">
             Choose Summarization Method
           </span>
-          <div className="mx-auto max-w-3xl grid gap-3 sm:grid-cols-3">
+          <div className="mx-auto max-w-3xl grid gap-3 sm:grid-cols-4">
             {SUMMARIZATION_METHODS.map((method) => {
               const isSelected = selectedMethod === method.id;
+              const isAuto = method.id === "auto";
               return (
                 <button
                   key={method.id}
@@ -147,7 +164,7 @@ function TextSummarize() {
                   }`}
                 >
                   <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-[var(--primary)]" : "text-[var(--text-primary)]"}`}>
-                    {method.name}
+                    {method.name}{isAuto && " ✦"}
                   </span>
                   <span className="text-[11px] font-semibold text-[var(--text-primary)]/90 mt-0.5">
                     {method.model}
@@ -317,6 +334,22 @@ function TextSummarize() {
                   <p className="text-sm sm:text-base leading-relaxed text-[var(--text-primary)] flex-1 font-medium" dir="auto">
                     {summary}
                   </p>
+
+                  {/* Routing insight badge (auto mode only) */}
+                  {routingReason && (
+                    <div className="rounded-lg border border-[var(--primary)]/15 bg-[var(--primary)]/5 px-3 py-2 text-[10px] text-[var(--text-secondary)] leading-relaxed">
+                      <span className="font-bold text-[var(--primary)] uppercase tracking-wider mr-1.5">Router →</span>
+                      {routingReason}
+                    </div>
+                  )}
+
+                  {/* Latency badge */}
+                  {latencySeconds !== null && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Completed in <strong>{latencySeconds.toFixed(2)}s</strong></span>
+                    </div>
+                  )}
 
                   {audioUrl && (
                     <div className="mt-2">

@@ -5,9 +5,9 @@
 | Item | Value |
 | --- | --- |
 | Test set | 1,302 samples (XL-Sum Telugu, BBC News Telugu) |
-| Fine-tuning corpus | 1,302 samples (filtered, 10-150 word summaries) |
-| Max input length | 384 tokens (fine-tuning), 512 tokens (inference) |
-| Max output length | 96 tokens |
+| Fine-tuning corpus | 10,421 samples (XL-Sum Telugu training split) |
+| Max input length | 384 tokens (training), 512 tokens (inference) |
+| Max output length | 96 tokens (training), 128 tokens (inference) |
 
 ---
 
@@ -15,9 +15,10 @@
 
 | Model | ROUGE-1 | ROUGE-2 | ROUGE-L | BERTScore |
 | --- | --- | --- | --- | --- |
-| TF-IDF | 0.0324 | 0.0034 | 0.0320 | 0.6728 |
-| mT5 Base | 0.0436 | 0.0022 | 0.0427 | 0.7239 |
-| mT5 Fine-Tuned | 0.0404 | 0.0019 | 0.0400 | 0.7229 |
+| TF-IDF V1 (Word-level) | 0.0709 | 0.0128 | 0.0554 | 0.6626 |
+| TF-IDF V2 (Char n-gram) | 0.0811 | 0.0162 | 0.0628 | 0.6671 |
+| mT5 Base | 0.1610 | 0.0478 | 0.1420 | 0.7273 |
+| mT5 Fine-Tuned (8-bit LoRA) | 0.1639 | 0.0496 | 0.1452 | 0.7272 |
 
 ### Performance Analysis & Anomalies
 Key insight: fine-tuning did not improve performance in this experiment because the dataset was limited and the pre-trained multilingual model already covered a similar distribution.

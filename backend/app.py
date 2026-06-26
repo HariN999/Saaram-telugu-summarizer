@@ -31,6 +31,7 @@ from input_limits import apply_input_limit
 from pipeline import run_pipeline
 from services.news_service import fetch_telugu_news
 from summarize_mt5 import get_model_status, preload_models
+from router import get_router_config
 from tts import text_to_speech
 from url_safety import URLSafetyError, validate_public_url
 
@@ -99,8 +100,12 @@ _TTS_CACHE = BoundedCache(max_size=200)
 # Request/Response Models
 # ============================================================================
 
-METHOD_TYPE = Literal["tfidf", "mt5_base", "mt5_finetuned"]
-METHOD_DESCRIPTION = "Summarization method: 'tfidf' (extractive), 'mt5_base' (abstractive base), or 'mt5_finetuned' (abstractive fine-tuned)"
+METHOD_TYPE = Literal["tfidf", "mt5_base", "mt5_finetuned", "auto"]
+METHOD_DESCRIPTION = (
+    "Summarization method: 'tfidf' (extractive), 'mt5_base' (abstractive base), "
+    "'mt5_finetuned' (abstractive fine-tuned), or 'auto' (adaptive router selects "
+    "the best method based on article characteristics and available resources)"
+)
 
 
 class SummarizeRequest(BaseModel):
@@ -130,6 +135,14 @@ class SummarizeResponse(BaseModel):
     input_limit: int = Field(default=0, description="Maximum processed input length")
     original_input_length: int = Field(default=0, description="Input length before truncation")
     processed_input_length: int = Field(default=0, description="Input length after truncation")
+    # ── Adaptive router fields (populated when requested_method == 'auto') ──
+    auto_routed: bool = Field(default=False, description="True when the adaptive router selected the method automatically")
+    routing_reason: Optional[str] = Field(None, description="Human-readable explanation of the router's model selection decision")
+    routing_features: Optional[dict] = Field(None, description="Input features used by the router: word_count, tfidf_variance, available_ram_mb, thresholds, etc.")
+    # ── Latency breakdown ────────────────────────────────────────────────────
+    routing_latency_seconds: float = Field(default=0.0, description="Time spent in router.route() only (feature extraction + decision). 0.0 when method is not 'auto'.")
+    inference_latency_seconds: float = Field(default=0.0, description="Time spent in the summarization model call only (excludes extract/clean/TTS).")
+    latency_seconds: float = Field(default=0.0, description="Total end-to-end pipeline latency in seconds (extract + clean + route + summarize + optional TTS).")
 
 
 class ErrorResponse(BaseModel):
@@ -236,7 +249,8 @@ def root():
         "status": "online",
         "service": "Telugu News Summarization API",
         "version": "2.0.0",
-        "methods": ["tfidf", "mt5_base", "mt5_finetuned"],
+        "methods": ["tfidf", "mt5_base", "mt5_finetuned", "auto"],
+        "auto_routes_between": ["tfidf", "mt5_base"],
     }
 
 
@@ -252,6 +266,18 @@ def health_check():
             "tts": "available",
         },
     }
+
+
+@app.get("/router/config", tags=["Health"])
+def router_config():
+    """
+    Return the current adaptive router configuration.
+
+    Exposes all routing thresholds and the rationale for excluding the
+    fine-tuned model from Auto mode.  Useful for reproducibility and
+    for tuning the router without redeployment (set env vars, restart).
+    """
+    return get_router_config()
 
 
 @app.get("/ready", tags=["Health"])
@@ -494,6 +520,12 @@ def summarize_text(request: SummarizeRequest):
             input_limit=result.get("input_limit", 0),
             original_input_length=result.get("original_input_length", len(result["original_text"])),
             processed_input_length=result.get("processed_input_length", len(result["original_text"])),
+            auto_routed=result.get("auto_routed", False),
+            routing_reason=result.get("routing_reason"),
+            routing_features=result.get("routing_features"),
+            routing_latency_seconds=result.get("routing_latency_seconds", 0.0),
+            inference_latency_seconds=result.get("inference_latency_seconds", 0.0),
+            latency_seconds=result.get("latency_seconds", 0.0),
         )
 
     except ValueError as e:
@@ -548,6 +580,12 @@ def summarize_url(request: URLRequest):
             input_limit=result.get("input_limit", 0),
             original_input_length=result.get("original_input_length", len(result["original_text"])),
             processed_input_length=result.get("processed_input_length", len(result["original_text"])),
+            auto_routed=result.get("auto_routed", False),
+            routing_reason=result.get("routing_reason"),
+            routing_features=result.get("routing_features"),
+            routing_latency_seconds=result.get("routing_latency_seconds", 0.0),
+            inference_latency_seconds=result.get("inference_latency_seconds", 0.0),
+            latency_seconds=result.get("latency_seconds", 0.0),
         )
 
     except ValueError as e:

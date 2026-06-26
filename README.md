@@ -98,9 +98,10 @@ For reliability and hardening features implemented on this stack, see [docs/RELI
 
 | Model | ROUGE-1 | ROUGE-2 | ROUGE-L | BERTScore |
 | --- | --- | --- | --- | --- |
-| TF-IDF | 0.0324 | 0.0034 | 0.0320 | 0.6728 |
-| mT5 Base | 0.0436 | 0.0022 | 0.0427 | 0.7239 |
-| mT5 Fine-Tuned | 0.0404 | 0.0019 | 0.0400 | 0.7229 |
+| TF-IDF V1 (Word-level) | 0.0709 | 0.0128 | 0.0554 | 0.6626 |
+| TF-IDF V2 (Char n-gram) | 0.0811 | 0.0162 | 0.0628 | 0.6671 |
+| mT5 Base | 0.1610 | 0.0478 | 0.1420 | 0.7273 |
+| mT5 Fine-Tuned (8-bit LoRA) | 0.1639 | 0.0496 | 0.1452 | 0.7272 |
 
 **Summary:** Baseline mT5 models perform competitively with fine-tuned variants due to limited local dataset size. BERTScore proves to be more informative than token-matching ROUGE scores for morphologically rich languages like Telugu.
 
