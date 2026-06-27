@@ -82,3 +82,29 @@ myenv/
 
 # Local benchmark scripts output
 *_latency*
+```gitignore
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+myenv/
+venv/
+.venv/
+
+# Evaluation artifacts
+*.csv
+deep_fake_summaries.txt
+fbi_summaries.txt
+backend/eval_results/
+
+# Model weights
+backend/model/
+
+# OS
+.DS_Stores
+
+# Node
+frontend/node_modules/
+frontend/dist/
+```

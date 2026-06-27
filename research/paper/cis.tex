@@ -1,0 +1,857 @@
+%!TEX program = xelatex
+%% ============================================================
+%%  CIS 2026 — Congress on Intelligent Systems
+%%  NIT Warangal x SCRS — Springer LNNS
+%%  FINAL SUBMISSION DRAFT
+%%
+%%  Title: Morphology-Aware Telugu News Summarization:
+%%         Comparing Extractive and Abstractive Approaches
+%%         under Resource Constraints
+%%
+%%  System: Saaram ({\telugufont సారం})
+%% ============================================================
+
+\documentclass[runningheads]{llncs}
+
+%% ── Packages ─────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\setotherlanguage{telugu}
+\newfontfamily\telugufont{Noto Serif Telugu}[Script=Telugu]
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[section]{placeins}
+\usepackage{url}
+\usepackage{cite}
+\usepackage[hidelinks]{hyperref}
+
+%% ── Float spacing ────────────────────────────────────────────
+\setlength{\textfloatsep}{5pt}
+\setlength{\floatsep}{4pt}
+\setlength{\intextsep}{4pt}
+
+%% ── TikZ ─────────────────────────────────────────────────────
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,
+                fit,backgrounds,calc}
+\tikzset{
+  block/.style={rectangle,rounded corners=2pt,
+    minimum width=2.0cm, minimum height=0.55cm,
+    text centered, draw=black, fill=#1,
+    font=\footnotesize\bfseries,
+    text width=1.95cm, inner sep=2pt},
+  block/.default=white,
+  wideblock/.style={rectangle,rounded corners=2pt,
+    minimum width=3.8cm, minimum height=0.70cm,
+    text centered, draw=black, fill=#1,
+    font=\small\bfseries,
+    text width=3.6cm, inner sep=3pt},
+  wideblock/.default=white,
+  arrow/.style={-{Stealth[length=4pt]},thick},
+  dasharrow/.style={-{Stealth[length=4pt]},thick,dashed},
+  groupbox/.style={rectangle,rounded corners=3pt,
+    draw=gray!70,dashed,thick,fill=#1!8,inner sep=5pt},
+  groupbox/.default=gray
+}
+
+%% ============================================================
+\begin{document}
+%% ============================================================
+
+\title{Morphology-Aware Telugu News Summarization:
+Comparing Extractive and Abstractive Approaches
+under Resource Constraints}
+
+\titlerunning{Morphology-Aware Telugu News Summarization}
+\authorrunning{Hariharan et al.}
+
+\author{
+  Hariharan Narlakanti\inst{1} \and
+  Vivek Nidumolu\inst{1}       \and
+  Vishnu Vardhan Reddy Padala\inst{1} \and
+  Sanjeev Practur\inst{1}      \and
+  Vinay Simha Reddy Tappeta\inst{1}
+}
+
+\institute{
+  Department of Computer Science and Engineering (AI \& ML),\\
+  Malla Reddy University, Hyderabad, Telangana, India\\
+  \email{narlakantihariharan@gmail.com}
+}
+
+\maketitle
+
+%% ============================================================
+%%  ABSTRACT
+%% ============================================================
+\begin{abstract}
+Telugu is a morphologically rich, agglutinative language that poses challenges for tokenization and evaluation in standard NLP pipelines. We present
+\textit{Saaram} ({\telugufont సారం}, ``essence''), a deployed Telugu news summarization service with optional speech synthesis, and conduct a comparative study of five configurations evaluated on the complete 1,302-sample XL-Sum Telugu test split. Our morphology-aware TF-IDF baseline replaces word-level tokenization with character n-gram analysis (\texttt{analyzer='char\_wb'}, $n \in [2,4]$) and lead-bias position weighting, achieving a 26.6\% improvement in ROUGE-2 over the word-level baseline. Evaluated abstractive models show that the 8-bit LoRA fine-tuned mT5 model achieves the highest lexical overlap (ROUGE-2: 0.0496) but yields near-identical semantic quality, measured by BERTScore (0.7272), compared to mT5 base (0.7273), indicating that in-distribution fine-tuning provides negligible semantic gains. Finally, a resource-aware runtime router dynamically selects between TF-IDF and mT5 base, retaining 99.56\% of mT5 semantic quality (BERTScore) while mitigating memory exhaustion risk. End-to-end latency profiling further provides deployment-relevant cost--quality trade-offs under resource constraints.
+\end{abstract}
+
+\keywords{Telugu text summarization \and morphology-aware TF-IDF \and mT5 \and low-resource NLP \and resource-aware routing}
+
+%% ============================================================
+\section{Introduction}
+%% ============================================================
+
+Telugu, with over 80~million native speakers across Telangana
+and Andhra Pradesh, is one of the most widely spoken languages
+in India yet remains severely underrepresented in deployed NLP systems~\cite{joshi2020text}. The rapid proliferation of
+digital Telugu news creates a clear societal need: readers face
+an overwhelming volume of content with few publicly accessible automated summarization tools exist for Telugu at scale.
+
+Two structural challenges compound this problem. First, Telugu
+is \emph{agglutinative}: a single root word generates dozens of
+inflected surface forms through affixation. Standard NLP
+pipelines that assume word-level tokenization — designed for
+morphologically simple languages like English — treat these
+inflected forms as unrelated vocabulary items, severely
+underestimating term importance and fragment evaluation
+metrics~\cite{singh2020text}. For example, the root
+\textit{{\telugufont రాష్ట్రం}} (state) appears in news text as
+\textit{{\telugufont రాష్ట్రంలో}} (in the state) and
+\textit{{\telugufont రాష్ట్రానికి}} (to the state) — three tokens that
+word-level TF-IDF treats as entirely unrelated.
+Second, many standard ROUGE implementations strip non-ASCII characters by default, making Telugu ROUGE scores
+undefined without explicit adaptation.
+
+Prior Telugu NLP work has addressed these challenges in
+isolation: extractive baselines without morphological
+awareness~\cite{anandbabu2023extractive}, or neural
+abstractive models without deployment
+analysis~\cite{srinivasa2019neural}. To our knowledge,
+no prior Telugu summarization study combines
+morphology-aware extractive improvement, large-scale
+neural comparison, and production deployment tradeoff
+analysis in a single evaluation framework.
+
+This paper presents \textit{Saaram} ({\telugufont సారం}, ``essence''), a
+deployed Telugu news summarization service with speech synthesis, and reports
+five contributions:
+
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
+  \item A \textbf{morphology-aware TF-IDF baseline} (TF-IDF~V2) utilizing character n-grams and lead-bias weighting, achieving a 26.6\% ROUGE-2 improvement over word-level TF-IDF~V1.
+  \item A \textbf{large-scale comparative benchmark} comparing five methods on the complete 1,302-sample XL-Sum Telugu test split with full ROUGE, BERTScore, and latency profiling.
+  \item A \textbf{LoRA fine-tuning ablation study} showing that 8-bit quantized LoRA adaptation yields marginal gains (+0.0032 ROUGE-L) without semantic improvement (BERTScore: 0.7272 vs. 0.7273) over the pre-trained base.
+  \item A \textbf{resource-aware inference strategy} routing requests at runtime to retaining 99.56\% of mT5 semantic quality (BERTScore) with a 5.38\% routing rate (70 of 1,302 samples) to TF-IDF~V2, serving as a deployment fallback.
+  \item A \textbf{resource-constrained deployment analysis} of the system on constrained free-tier CPU cloud infrastructure, characterizing memory-aware lazy loading, fallbacks, and TTS latency.
+\end{itemize}
+
+The complete system is publicly deployed: frontend on Vercel,
+backend on Hugging Face Spaces (Docker, CPU-only), and source
+code on GitHub.
+
+%% ============================================================
+\section{Related Work}
+%% ============================================================
+
+\textbf{Extractive and neural abstractive summarization.}
+Graph-based methods such as LexRank~\cite{erkan2004lexrank} and TextRank~\cite{mihalcea2004textrank} rank sentence salience using centrality measures, while MMR~\cite{carbonell1998use} introduces diversity-aware reranking. TF-IDF-based sentence scoring remains a classical baseline for both English and Indic summarization tasks~\cite{joshi2020text}. Prior Telugu extractive work~\cite{anandbabu2023extractive} primarily relies on word-level tokenization, which does not adequately capture agglutinative morphology. In abstractive summarization, attention-based architectures~\cite{rush2015neural}, pointer-copy mechanisms~\cite{nallapati2016abstractive}, and coverage penalties~\cite{see2017get} have improved sequence-to-sequence generation. The Transformer~\cite{vaswani2017attention} and T5~\cite{raffel2020exploring} further enabled unified text-to-text modeling. Multilingual T5 (mT5)~\cite{xue2021mt5} extends this framework to 101 languages, using SentencePiece-based subword segmentation that better accommodates Telugu morphology.
+
+
+\textbf{Indic and Telugu NLP.}
+IndicBART~\cite{kumar2022indicbart} is a pretrained model for Indic text generation, although our preliminary qualitative screening revealed instability on Telugu summarization inputs (Sect.~\ref{sec:model-selection}). Doddapaneni et al.~\cite{doddapaneni2021primer} survey Indic language models and identify data scarcity as a primary bottleneck, which datasets such as XL-Sum~\cite{hasan2021xlsum} and TeSum~\cite{urlana2022tesum} help alleviate. Prior Telugu summarization work~\cite{anandbabu2023extractive} applied TextRank and MMR while retaining word-level tokenization, a limitation addressed in this study.
+
+
+\textbf{Evaluation for agglutinative languages.}
+ROUGE~\cite{lin2004rouge} measures exact $n$-gram overlap, often penalizing inflected paraphrases common in agglutinative languages. BERTScore~\cite{zhang2020bertscore} uses pretrained contextual embeddings to compute token similarity, theoretically assigning partial credit to semantically equivalent yet morphologically varied tokens. Motivated by this property, we use BERTScore as the primary semantic similarity metric while reporting ROUGE as a supplementary lexical overlap measure.
+
+
+\textbf{Deployment gap.}
+Indic NLP literature rarely reports real-world deployment characteristics. Existing systems typically emphasize quality metrics without analyzing runtime latency, memory constraints, or resource-aware fallback mechanisms. This gap is addressed in our work through comprehensive deployment-aware profiling.
+
+
+%% ============================================================
+\section{System Architecture}
+\label{sec:arch}
+%% ============================================================
+
+\textit{Saaram} implements a three-tier architecture designed under two practical deployment constraints: free-tier cloud hosting with limited memory and CPU-only inference, and interactive latency requirements for user-facing summarization. Fig.~\ref{fig:arch} illustrates the complete pipeline. The frontend exposes three inference quality tiers corresponding to TF-IDF~V2, mT5~Base, and mT5~Fine-tuned models. Optional Edge TTS audio synthesis is supported for spoken summaries.
+
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.9cm and 0.7cm]
+
+  %% Tier 1: Frontend
+  \node[wideblock=blue!20,minimum height=0.9cm] (fe)
+    {\textit{Saaram} Frontend\\
+     {\small React.js $|$ Method Select $|$ Audio}};
+
+  %% Tier 2: Backend
+  \node[wideblock=orange!20,minimum height=0.9cm,
+        right=1.8cm of fe] (api)
+    {FastAPI Backend\\
+     {\small Pydantic $|$ Router $|$ Dispatch}};
+
+  \draw[arrow](fe.east)--(api.west)
+    node[midway,above,font=\scriptsize\itshape]{JSON/Axios};
+
+  %% Tier 3: Pipeline nodes
+  \node[block=purple!15,text width=2.0cm,
+        below=1.9cm of fe] (ext)
+    {Extraction\\{\scriptsize BS4 / RSS}};
+
+  \node[block=purple!15,text width=2.0cm,
+        right=0.5cm of ext] (cln)
+    {Unicode\\Cleaning};
+
+  \node[block=yellow!25,text width=2.0cm,
+        right=0.5cm of cln] (rtr)
+    {Adaptive\\Router};
+
+  \node[block=green!15,text width=2.0cm,
+        right=0.5cm of rtr] (tfi)
+    {TF-IDF V2\\{\scriptsize char n-gram}};
+
+  \node[block=green!25,text width=2.0cm,
+        right=0.5cm of tfi] (mb)
+    {mT5 Base\\{\scriptsize XLSum}};
+
+  \node[block=green!35,text width=2.0cm,
+        right=0.5cm of mb] (mft)
+    {mT5 Fine\\Tuned};
+
+  \node[block=cyan!20,text width=2.2cm,
+        right=0.5cm of mft] (tts)
+    {Edge TTS\\{\scriptsize te-IN-Shruti}};
+
+  %% Connections
+  \draw[arrow](ext)--(cln);
+  \draw[arrow](cln)--(rtr);
+  \draw[arrow](rtr)--(tfi);
+  \draw[arrow](rtr.north)--++(0,0.4)-|(mb.north);
+  \draw[dasharrow](mb)--(mft)
+    node[midway,below,font=\tiny\itshape]{optional};
+  \draw[arrow](tfi.south)--++(0,-0.3)-|(tts.south);
+  \draw[arrow](mb.south)--++(0,-0.3)-|(tts.south);
+
+  \draw[arrow](api.south)--++(0,-0.65)-|(cln.north);
+  \draw[arrow](tts.north)--++(0,0.9)-|(api.south);
+
+  %% Group boxes
+  \begin{scope}[on background layer]
+    \node[groupbox=purple,fit=(ext)(cln),
+          inner sep=5pt](gi){};
+    \node[groupbox=yellow,fit=(rtr),
+          inner sep=5pt](gr){};
+    \node[groupbox=green,fit=(tfi)(mb)(mft),
+          inner sep=5pt](gs){};
+    \node[groupbox=cyan,fit=(tts),
+          inner sep=6pt](gt){};
+  \end{scope}
+
+  \node[below=3pt of gi,font=\scriptsize\itshape]
+    {Input Processing};
+  \node[below=3pt of gr,font=\scriptsize\itshape]
+    {Router};
+  \node[below=3pt of gs,
+        font=\tiny\itshape,text width=3.6cm,align=center]
+    {Summarization (3 methods)};
+  \node[below=3pt of gt,font=\scriptsize\itshape]
+    {TTS};
+
+\end{tikzpicture}}
+\caption{\textit{Saaram} three-tier architecture. The resource-aware
+router selects TF-IDF~V2 or mT5~Base at runtime; mT5~Fine-tuned
+(8-bit LoRA) is available as a manual override. Edge TTS converts summaries
+to Telugu audio asynchronously.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Input Processing}
+\label{sec:input}
+
+The system supports three input modes: (1)~direct text entry, (2)~URL-based article extraction using BeautifulSoup4 with a 10-second timeout and \texttt{<p>}-element prioritization, and (3)~live RSS ingestion from BBC Telugu for the Saaram Radio bulletin feature. All inputs pass through a Unicode-aware regular-expression cleaning pipeline that preserves the Telugu Unicode block (U+0C00--U+0C7F), dandas (U+0964), ASCII digits, and standard punctuation. This preprocessing pipeline is applied identically during fine-tuning and inference to ensure training--inference consistency.
+
+
+\subsection{Morphology-Aware TF-IDF (V2)}
+\label{sec:tfidf}
+
+Standard word-level TF-IDF (V1) fails for Telugu because
+agglutinative inflection creates distinct surface tokens for
+semantically related forms. Consider the root
+\textit{{\telugufont రాష్ట్రం}} (state): its inflected forms
+\textit{{\telugufont రాష్ట్రంలో}} (in the state) and
+\textit{{\telugufont రాష్ట్రానికి}} (to the state) share no whitespace-
+delimited word token, causing TF-IDF to assign separate, low
+term weights to each form of a high-frequency concept.
+
+TF-IDF~V2 addresses this with four targeted improvements:
+
+(1)~\textbf{Character n-gram analysis:} replacing word tokenization with character n-grams (\texttt{analyzer='char\_wb'}, $\texttt{ngram\_range}=(2,4)$) to capture root substrings across inflected forms, restoring term-frequency coherence; (2)~\textbf{Lead-bias position weighting:} applying decaying position weights to scores to boost earlier sentences, reflecting news inverted-pyramid structures; (3)~\textbf{Adaptive sentence selection:} dynamically adjusting the sentence extraction count $k$ based on input length to prevent under/over-extraction; and (4)~\textbf{Per-sentence score exposure:} exposing sentence-level scores to the router (Sect.~\ref{sec:router}) as confidence signals.
+
+\subsection{mT5 Abstractive Summarization}
+\label{sec:mt5}
+
+\textbf{mT5 Base.}
+We use the
+\texttt{csebuetnlp/mT5\_multilingual\_XLSum}
+checkpoint (580M parameters), pretrained on multilingual
+mC4 and further adapted for multilingual summarization on
+the XL-Sum benchmark, including Telugu.
+SentencePiece tokenization naturally captures Telugu
+subword morphology.
+Inference uses beam search with width~4, length
+penalty~2.0, trigram blocking, output length bounds of
+30--128 tokens, and a maximum input length of 512 tokens.
+
+\textbf{mT5 Fine-tuned (8-bit LoRA).}
+The base checkpoint is further adapted to XL-Sum Telugu
+using parameter-efficient LoRA~\cite{hu2022lora}
+applied to an 8-bit quantized model~\cite{dettmers2022int8}.
+LoRA uses rank $r=16$, scaling factor $\alpha=32$,
+target modules \texttt{[q,v]}, and dropout 0.05.
+
+Training was performed for 3 epochs with learning rate
+$3\times10^{-4}$ and per-device batch size 4 with
+gradient accumulation $\times 2$ (effective batch size 8)
+on a single NVIDIA Tesla T4 GPU (16\,GB VRAM, Kaggle
+environment). Training input and target lengths were
+capped at 384 and 96 tokens, respectively, while deployed
+inference uses \texttt{max\_length=128}. The dataset was
+split into 10,421 training, 1,302 validation, and 1,302
+test samples. An earlier full-parameter fine-tuned
+baseline (3.372\,s latency) is reported in
+Table~\ref{tab:latency} for reference.
+
+Since the base checkpoint already contains Telugu
+summarization knowledge from XL-Sum pre-adaptation,
+additional LoRA fine-tuning yields only marginal lexical
+improvements (ROUGE-L +0.0032) without measurable
+semantic gains (BERTScore: 0.7272 vs.\ 0.7273).
+
+
+\subsection{Model Backbone Selection}
+\label{sec:model-selection}
+
+Four abstractive backbones were screened qualitatively
+using a representative set of Telugu news articles,
+evaluated by two native Telugu speakers and one NLP
+researcher.
+
+\textbf{IndicBART} (244M parameters) produced unstable
+outputs, frequently exhibiting token repetition,
+language switching, and named-entity hallucinations.
+\textbf{mBART-50} (611M parameters) generated
+grammatically valid summaries but often produced generic
+or less informative outputs. \textbf{mT5 Base}
+(580M parameters) produced fluent, language-consistent
+summaries with strong semantic preservation.
+\textbf{mT5 Fine-tuned} (580M parameters) showed similar
+fluency while providing slightly improved domain
+consistency.
+
+Based on this qualitative screening, the two mT5
+variants were selected for full quantitative evaluation.
+
+\subsection{Resource-Aware Inference Strategy}
+\label{sec:router}
+
+As a deployment optimization layer, the system includes a
+lightweight inference router that intercepts each
+summarization request before model dispatch and selects
+between TF-IDF~V2 and mT5~Base without user intervention.
+
+Routing decisions are based on three signals:
+(1)~\textbf{Word count}, where inputs below 75 words are
+routed to TF-IDF~V2 and inputs above 200 words to
+mT5~Base;
+(2)~\textbf{TF-IDF score variance}, where variance above
+0.04 favors TF-IDF~V2 and variance below 0.008 favors
+mT5~Base; and
+(3)~\textbf{Available RAM}, where low-memory conditions
+force TF-IDF~V2 regardless of other signals.
+
+The router never selects the fine-tuned model
+automatically; fine-tuned inference remains a manual
+override reserved for cases where marginal ROUGE gains
+are desired.
+
+On the XL-Sum test split, 70 of 1,302 samples (5.38\%)
+were routed to TF-IDF~V2, reflecting the dataset bias
+toward longer news articles. Since the router activates
+for only a small fraction of in-distribution samples, it
+primarily serves as a deployment safeguard for graceful
+degradation under resource constraints rather than as a
+core algorithmic contribution.
+
+
+\subsection{Deployment Constraints and Optimization}
+\label{sec:deployment}
+
+\textit{Saaram} is deployed on Hugging Face Spaces under
+free-tier constraints (2~vCPU, 16~GB RAM, CPU-only
+inference), imposing strict resource limitations that
+required explicit architectural optimizations.
+
+\textbf{Memory-aware lazy loading.}
+The mT5 checkpoints require approximately 2.3~GB RAM for
+the 8-bit LoRA checkpoint and 3.7~GB for the earlier
+full-parameter baseline. Loading multiple checkpoints
+simultaneously alongside FastAPI, the TF-IDF pipeline,
+and operating-system overhead risks out-of-memory (OOM)
+failures. To mitigate this, models are initialized only
+upon first request (\emph{lazy loading}) and garbage-
+collected after a configurable idle timeout. As a result,
+only the actively requested model occupies memory at any
+given time.
+
+\textbf{Robust fallback hierarchy.}
+The system handles three major failure modes through
+automatic degradation. First, OOM events during mT5
+inference trigger immediate fallback to TF-IDF~V2, with
+the API returning a flag indicating degraded mode.
+Second, checkpoint loading failures trigger fallback from
+the fine-tuned model to mT5 Base, and subsequently to
+TF-IDF~V2 if required. Third, URL extraction failures
+return structured error responses with clear recovery
+guidance. These safeguards ensure that the system never
+returns an unhandled empty response.
+
+\textbf{API design.}
+The backend exposes seven FastAPI endpoints across Health,
+News, Summarization, and Audio services. Request schemas
+use Pydantic validation, and invalid requests return
+structured HTTP~422 error responses for improved
+debuggability and client-side handling.
+
+%% ============================================================
+\section{Experimental Setup}
+\label{sec:setup}
+%% ============================================================
+
+\textbf{Dataset.}
+All experiments use the complete XL-Sum Telugu test
+split~\cite{hasan2021xlsum}, consisting of 1,302 BBC
+Telugu news articles paired with human-written reference
+summaries across politics, business, sports, and current
+affairs. The base mT5 checkpoint was pretrained on
+multilingual mC4 and subsequently fine-tuned on the
+multilingual XL-Sum corpus, including Telugu, making
+this evaluation largely in-distribution (discussed in
+Sect.~\ref{sec:analysis}).
+
+\textbf{Evaluation pipeline.}
+The evaluation pipeline processes the full 1,302-sample
+test split with checkpointing/resume support, structured
+CSV outputs, and mean/P95/P99 latency profiling.
+
+\textbf{ROUGE adaptation.}
+Standard ROUGE scorers strip non-ASCII characters,
+making Telugu evaluation invalid. We therefore implement
+a custom Unicode-preserving tokenizer for reliable
+ROUGE computation over Telugu text.
+
+\textbf{Preprocessing consistency.}
+All configurations receive identical cleaned inputs using
+the preprocessing pipeline described in
+Sect.~\ref{sec:input}. The same preprocessing settings
+are applied during evaluation and baseline scoring.
+
+\textbf{Metrics.}
+We report ROUGE-1, ROUGE-2, ROUGE-L, and BERTScore F1.
+BERTScore is computed using
+\texttt{bert-base-multilingual-cased} with default
+rescaling for Telugu. Wall-clock latency, measured from
+request ingestion to output serialization, is averaged
+across the test split.
+
+%% ============================================================
+\section{Results}
+\label{sec:results}
+%% ============================================================
+
+\subsection{TF-IDF V1 vs V2: Morphological Improvement}
+
+We isolate the contribution of morphology-aware
+character $n$-gram analysis by comparing TF-IDF~V1
+(word-level) and TF-IDF~V2 (character $n$-gram) in
+Tables~\ref{tab:main} and~\ref{tab:latency}. TF-IDF~V2
+consistently improves all ROUGE metrics while preserving
+near-zero inference cost.
+
+ROUGE-2 shows the largest relative gain, improving by
+26.6\% (0.0128 $\rightarrow$ 0.0162), suggesting that
+character $n$-grams mitigate bigram fragmentation caused
+by Telugu morphological inflection. ROUGE-1 and
+ROUGE-L improve by 14.4\% (0.0709 $\rightarrow$ 0.0811)
+and 13.4\% (0.0554 $\rightarrow$ 0.0628), respectively.
+Despite these gains, mean latency remains effectively
+negligible at 0.005\,s.
+
+\subsection{Full Comparative Evaluation}
+
+Table~\ref{tab:main} summarizes quality metrics across all
+five evaluated configurations, enabling direct comparison
+of extractive, abstractive, and hybrid approaches.
+Table~\ref{tab:latency} reports inference latency
+separately to preserve focus on summarization quality in
+the primary comparison.
+
+\begin{table}[!htbp]
+\centering
+\caption{Quality Evaluation --- XL-Sum Telugu Test Split
+(1,302 samples). Bold indicates best per metric.}
+\label{tab:main}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{p{3.5cm}cccc}
+\toprule
+\textbf{Method}
+& \textbf{ROUGE-1}
+& \textbf{ROUGE-2}
+& \textbf{ROUGE-L}
+& \textbf{BERTScore} \\
+\midrule
+TF-IDF V1 (word-level)
+& 0.0709 & 0.0128 & 0.0554 & 0.6626 \\
+
+TF-IDF V2 (char $n$-gram)
+& 0.0811 & 0.0162 & 0.0628 & 0.6671 \\
+
+mT5 Base (pretrained)
+& 0.1610 & 0.0478 & 0.1420 & \textbf{0.7273} \\
+
+mT5 Fine-tuned$^\dagger$
+& \textbf{0.1639}
+& \textbf{0.0496}
+& \textbf{0.1452}
+& 0.7272 \\
+
+Auto Router (hybrid)
+& 0.1562 & 0.0458 & 0.1372 & 0.7241 \\
+\midrule
+\multicolumn{5}{p{11.2cm}}{\footnotesize
+All ROUGE values are F1 scores.
+BERTScore F1 computed using \texttt{bert-base-multilingual-cased} with rescaling.
+$^\dagger$ Fine-tuned model uses 8-bit LoRA adaptation.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\caption{Inference Latency Profile --- CPU-only deployment
+(HuggingFace Spaces, 1,302 samples).}
+\label{tab:latency}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{3.9cm}cc}
+\toprule
+\textbf{Method} & \textbf{Mean (s)} & \textbf{P95 (s)} \\
+\midrule
+TF-IDF V1        & 0.001 & 0.001 \\
+TF-IDF V2        & 0.005 & 0.008 \\
+mT5 Base         & 2.583 & 3.739$^*$ \\
+mT5 Fine-tuned$^\dagger$ & 2.482 & --- \\
+Auto Router      & 3.130 & 5.504 \\
+\midrule
+\multicolumn{3}{p{8.2cm}}{\footnotesize
+$^*$ mT5 Base P99 = 9.689\,s. 
+$^\dagger$ Fine-tuned model uses 8-bit LoRA; latency reduced versus prior full-parameter checkpoint (3.372\,s; Sect.~\ref{sec:mt5}).} \\
+\multicolumn{3}{p{8.2cm}}{\footnotesize
+P95/P99 omitted for sub-ms TF-IDF. Fine-tuned P95/P99 not measured.
+Router P99 omitted due to cold-start variance.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{(F1) mT5 significantly outperforms TF-IDF.}
+mT5~Base achieves ROUGE-L of 0.1420 compared with
+0.0628 for TF-IDF~V2, representing a 126\% relative
+improvement and aligning with prior multilingual
+summarization baselines~\cite{hasan2021xlsum}.
+BERTScore similarly improves from 0.6671 to 0.7273.
+TF-IDF~V2 consistently outperforms TF-IDF~V1,
+confirming that morphology-aware tokenization improves
+extractive summarization quality.
+
+\textbf{(F2) LoRA fine-tuning provides negligible semantic gain.}
+mT5 Fine-tuned (8-bit LoRA) yields near-identical
+semantic quality to mT5~Base (BERTScore: 0.7272 vs.\
+0.7273), indicating that additional adaptation on an
+already covered distribution primarily affects lexical
+realization rather than semantic representation.
+
+\textbf{(F3) Deployment latency remains comparable.}
+The 8-bit LoRA fine-tuned model achieves mean latency
+of 2.482\,s, slightly faster than mT5~Base (2.583\,s)
+and substantially faster than the earlier full-parameter
+fine-tuned baseline (3.372\,s).
+
+\textbf{(F4) Resource-aware routing retains 99.56\% of mT5 quality.}
+The router preserves 99.56\% of mT5 quality
+(BERTScore: 0.7241 vs.\ 0.7273) while routing only
+5.38\% of samples to TF-IDF~V2, serving as an effective
+fallback mechanism under resource-constrained deployment.
+
+
+
+%% ============================================================
+%% ============================================================
+\section{Discussion and Analysis}
+\label{sec:analysis}
+%% ============================================================
+
+\textbf{In-Distribution Fine-Tuning.}
+The near-identical performance of mT5~Base and mT5~Fine-tuned (8-bit LoRA) indicates that local LoRA adaptation yields negligible semantic improvement over the base model. Since the base checkpoint (\texttt{csebuetnlp/mT5\_multilingual\_XLSum}) was already fine-tuned on the multilingual XL-Sum corpus, including Telugu, further in-distribution adaptation primarily alters surface phrasing rather than underlying semantic representations. Practitioners may therefore benefit more from fine-tuning on out-of-distribution domains where pretrained representations are weaker.
+
+\textbf{Morphology-Aware Character N-Grams.}
+The 26.6\% ROUGE-2 improvement of TF-IDF~V2 over TF-IDF~V1 highlights the value of morphology-aware tokenization. In Telugu, a concept such as \textit{government} can appear as inflected surface forms (\textit{{\telugufont ప్రభుత్వం}}, \textit{{\telugufont ప్రభుత్వానికి}}, \textit{{\telugufont ప్రభుత్వంపై}}) that share the root sequence \textit{{\telugufont ప్రభుత్వ}}. Character $n$-grams with range $(2,4)$ capture these shared substrings, aggregating term-frequency signals that word-level TF-IDF would otherwise fragment across distinct vocabulary entries, thereby improving salience estimation.
+
+\textbf{Router Optimization.}
+The inference router functions primarily as a deployment safeguard, routing only 5.38\% of XL-Sum test samples (70 of 1,302) to TF-IDF~V2. Because most in-distribution news articles are sufficiently long and information-dense, mT5~Base remains the dominant inference path. The router therefore serves mainly as an engineering fallback that improves robustness by enabling graceful degradation from neural to statistical summarization under resource constraints.
+
+\textbf{BERTScore Suitability.}
+BERTScore computes contextual token similarity and can assign partial credit to paraphrases that preserve meaning despite lexical variation. This property is especially relevant for morphologically agglutinative languages such as Telugu, where the same concept may appear in multiple inflected forms. We therefore use BERTScore as the primary semantic similarity metric, while acknowledging that its practical suitability relative to ROUGE for Telugu remains unverified without human evaluation. Such validation is an important direction for future work.
+
+%% ============================================================
+\section{Qualitative Analysis}
+\label{sec:qualitative}
+%% ============================================================
+Table~\ref{tab:qualitative} presents a qualitative comparison
+on a representative sample from the XL-Sum Telugu test split
+(sample ID: \texttt{international-53333964}). System outputs
+were generated using the local \textit{Saaram} evaluation
+pipeline under the same preprocessing and inference settings
+used for quantitative evaluation. The table shows top-ranked
+extractive sentences for TF-IDF variants and decoded outputs
+for mT5 variants, illustrating the qualitative difference
+between extraction and abstraction.
+
+\begin{table}[!htbp]
+\centering
+\caption{Qualitative Output Comparison --- XL-Sum Telugu test sample (index 0, \texttt{international-53333964}). Outputs are actual system inference results.}
+\label{tab:qualitative}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{2.2cm}p{6.6cm}}
+\toprule
+\textbf{Source} & \textbf{Telugu Script} \\
+\midrule
+
+Input article &
+{\telugufont ఎఫ్‌బీఐ డైరెక్టర్ క్రిస్టఫర్ రే “చైనా ప్రభుత్వ గూఢచర్యం, డేటా చోరీ వల్ల అమెరికా భవిష్యత్తుకు ఎప్పుడూ లేనంత దీర్ఘకాలిక ముప్పు ఉంది” అని అన్నారు. “చైనా చాలా స్థాయిల్లో ఆపరేషన్లు నిర్వహిస్తోంది.”}
+\textit{[Article continues; full text available in XL-Sum Telugu dataset, sample ID: \texttt{international-53333964}.]} \\
+\midrule
+
+Gold reference &
+{\telugufont చైనా ప్రభుత్వం నుంచి అమెరికాకు అతిపెద్ద దీర్ఘకాలిక ముప్పు పొంచి ఉందని అమెరికా నిఘా ఏజెన్సీ ఎఫ్‌బీఐ డైరెక్టర్ క్రిస్టఫర్ రే అన్నారు.} \\
+\midrule
+
+TF-IDF V1 &
+{\telugufont ఎఫ్‌బీఐ డైరెక్టర్ క్రిస్టఫర్ రే “చైనా ప్రభుత్వ గూఢచర్యం, డేటా చోరీ వల్ల అమెరికా భవిష్యత్తుకు ఎప్పుడూ లేనంత దీర్ఘకాలిక ముప్పు ఉంది” అని అన్నారు...}
+\textit{[Output truncated for brevity]} \\
+\midrule
+
+TF-IDF V2 &
+{\telugufont ఎఫ్‌బీఐ డైరెక్టర్ క్రిస్టఫర్ రే “చైనా ప్రభుత్వ గూఢచర్యం, డేటా చోరీ వల్ల అమెరికా భవిష్యత్తుకు ఎప్పుడూ లేనంత దీర్ఘకాలిక ముప్పు ఉంది” అని అన్నారు...}
+\textit{[Output truncated for brevity]} \\
+\midrule
+
+mT5 Base &
+{\telugufont చైనా ఆర్థిక గూఢచర్యం, డేటా చోరీ వల్ల అమెరికా భవిష్యత్తుకు ఎప్పుడూ లేనంత దీర్ఘకాలిక ముప్పు ఉందని ఫైనాన్షియల్ బ్యాంక్ ఆఫ్ ఇండియా (ఎఫ్‌బీఐ) డైరెక్టర్ చెప్పారు.} \\
+\midrule
+
+mT5 Fine-tuned (8-bit LoRA) &
+{\telugufont చైనా ప్రభుత్వం గూఢచర్యం, డేటా చోరీ వల్ల అమెరికా భవిష్యత్తుకు ఎప్పుడూ లేనంత దీర్ఘకాలిక ముప్పు ఉందని ఎఫ్‌బీఐ డైరెక్టర్ తెలిపారు.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three qualitative patterns are visible. First, TF-IDF~V1
+and TF-IDF~V2 both return a near-verbatim first sentence
+of the article, reflecting the lead-bias position weighting
+in V2 and the high term frequency of salient
+government-related tokens in both methods. Their stronger
+ROUGE-2 performance in aggregate evaluation
+(Table~\ref{tab:main}) therefore arises largely from lexical
+bigram copying rather than true abstractive compression.
+
+Second, both mT5 variants produce abstractive paraphrases
+that deviate lexically from the source and reference,
+helping explain their lower ROUGE-2 despite higher
+BERTScore. Notably, the mT5~Base output expands the
+abbreviation \textit{FBI} as
+\textit{{\telugufont ఫైనాన్షియల్ బ్యాంక్ ఆఫ్ ఇండియా}}
+(Financial Bank of India), a named-entity hallucination
+absent from the source. This illustrates a common
+hallucination failure mode in multilingual abstractive
+summarization for abbreviation-dense news text.
+
+Third, the mT5~Fine-tuned (8-bit LoRA) output more closely
+mirrors the noun-phrase structure of the reference summary,
+consistent with the marginal ROUGE-L gain (+0.0032) without
+meaningful BERTScore improvement. This suggests that local
+fine-tuning primarily refines surface phrasing rather than
+semantic content.
+
+\FloatBarrier
+%% ============================================================
+\section{Limitations and Future Work}
+%% ============================================================
+
+This study has several limitations.
+(1)~\textbf{No human evaluation:} all evaluations rely on
+automatic metrics without human assessment of fluency,
+faithfulness, or factual consistency;
+(2)~\textbf{No component ablation:} the individual
+contributions of character $n$-gram analysis, position
+weighting, and adaptive sentence selection in TF-IDF~V2
+were not isolated;
+(3)~\textbf{TTS quality:} speech synthesis quality was
+assessed only qualitatively, without a controlled Mean
+Opinion Score (MOS) study;
+(4)~\textbf{In-distribution fine-tuning:} LoRA adaptation
+was restricted to the news domain, where base model
+representations were already strong; and
+(5)~\textbf{Domain restriction:} generalizability to other
+Telugu text genres remains unverified.
+
+Future work includes out-of-distribution LoRA fine-tuning
+(e.g., legal, educational, or conversational Telugu),
+component-wise ablation of TF-IDF~V2, longer-context
+architectures for documents exceeding 512 tokens, human
+correlation studies for metric validation, and extension
+to other Dravidian languages.
+
+\section{Conclusion}
+%% ============================================================
+
+This paper presented \textit{Saaram}, a deployed Telugu news
+summarization system with optional speech synthesis, along
+with a comparative study on the complete 1,302-sample
+XL-Sum Telugu test split. Our findings show that:
+(1)~morphology-aware TF-IDF~V2 yields a 26.6\% ROUGE-2
+improvement over TF-IDF~V1, validating character
+$n$-grams for agglutinative languages;
+(2)~in-distribution 8-bit LoRA fine-tuning provides
+negligible semantic gains over the pre-trained mT5 base
+model;
+(3)~BERTScore provides a more semantically informative
+evaluation signal than ROUGE for inflected Telugu outputs,
+although human validation remains necessary; and
+(4)~the resource-aware router preserves 99.56\% of mT5
+quality while providing a reliable fallback under
+memory-constrained deployment settings.
+
+%% ============================================================
+%%  REFERENCES
+%% ============================================================
+\begin{thebibliography}{00}
+
+\bibitem{joshi2020text}
+A.~Joshi et al., ``Text Summarization for Indian Languages:
+A Survey,'' \textit{ACM Trans.\ Asian Low-Resource Lang.\
+Inf.\ Process.}, vol.~19, no.~6, pp.~1--35, 2020.
+
+\bibitem{singh2020text}
+P.~Singh and K.~Reddy, ``Text Summarization and Document
+Summarization using NLP,'' in \textit{Proc.\ ICCIDS},
+vol.~167, pp.~745--752, 2020.
+
+\bibitem{hasan2021xlsum}
+T.~Hasan et al., ``XL-Sum: Large-Scale Multilingual
+Abstractive Summarization for 44 Languages,''
+in \textit{Findings ACL-IJCNLP}, pp.~4693--4703, 2021.
+
+\bibitem{srinivasa2019neural}
+M.~Srinivasa~Rao and K.~Sridevi, ``Neural Abstractive
+Text Summarizer for Telugu Language,''
+\textit{IJITEE}, vol.~8, no.~11, pp.~3214--3218, 2019.
+
+\bibitem{anandbabu2023extractive}
+G.~L.~Anand Babu and S.~Badugu, ``Extractive Summarization
+of Telugu Text Using Modified TextRank and MMR,''
+\textit{IJISAE}, vol.~11, no.~2, pp.~512--519, 2023.
+
+\bibitem{erkan2004lexrank}
+G.~Erkan and D.~R.~Radev, ``LexRank: Graph-based Lexical
+Centrality as Salience in Text Summarization,''
+\textit{J.\ Artif.\ Intell.\ Res.}, vol.~22,
+pp.~457--479, 2004.
+
+\bibitem{mihalcea2004textrank}
+R.~Mihalcea and P.~Tarau, ``TextRank: Bringing Order
+into Text,'' in \textit{Proc.\ EMNLP}, pp.~404--411, 2004.
+
+\bibitem{carbonell1998use}
+J.~Carbonell and J.~Goldstein, ``The Use of MMR,
+Diversity-Based Reranking for Reordering Documents
+and Producing Summaries,'' in \textit{Proc.\ ACM SIGIR},
+pp.~335--336, 1998.
+
+\bibitem{rush2015neural}
+A.~M.~Rush, S.~Chopra, and J.~Weston, ``A Neural Attention
+Model for Abstractive Sentence Summarization,''
+in \textit{Proc.\ EMNLP}, pp.~379--389, 2015.
+
+\bibitem{nallapati2016abstractive}
+R.~Nallapati et al., ``Abstractive Text Summarization
+using Sequence-to-Sequence RNNs and Beyond,''
+in \textit{Proc.\ CoNLL}, pp.~280--290, 2016.
+
+\bibitem{see2017get}
+A.~See, P.~J.~Liu, and C.~D.~Manning, ``Get To The Point:
+Summarization with Pointer-Generator Networks,''
+in \textit{Proc.\ ACL}, pp.~1073--1083, 2017.
+
+\bibitem{vaswani2017attention}
+A.~Vaswani et al., ``Attention is All You Need,''
+in \textit{Proc.\ NeurIPS}, pp.~5998--6008, 2017.
+
+\bibitem{raffel2020exploring}
+C.~Raffel et al., ``Exploring the Limits of Transfer
+Learning with a Unified Text-to-Text Transformer,''
+\textit{JMLR}, vol.~21, no.~140, pp.~1--67, 2020.
+
+\bibitem{xue2021mt5}
+L.~Xue et al., ``mT5: A Massively Multilingual Pre-trained
+Text-to-Text Transformer,'' in \textit{Proc.\ NAACL-HLT},
+pp.~483--498, 2021.
+
+\bibitem{kumar2022indicbart}
+V.~Kumar et al., ``IndicBART: A Pre-trained Model for
+Indic Natural Language Generation,''
+in \textit{Findings ACL}, pp.~1849--1863, 2022.
+
+\bibitem{doddapaneni2021primer}
+S.~Doddapaneni et al., ``A Primer on Pretrained
+Multilingual Language Models,''
+arXiv preprint arXiv:2107.00676, 2021.
+
+\bibitem{lin2004rouge}
+C.-Y.~Lin, ``ROUGE: A Package for Automatic Evaluation
+of Summaries,'' in \textit{Text Summarization Branches Out},
+pp.~74--81, 2004.
+
+\bibitem{zhang2020bertscore}
+T.~Zhang et al., ``BERTScore: Evaluating Text Generation
+with BERT,'' in \textit{Proc.\ ICLR}, 2020.
+
+\bibitem{urlana2022tesum}
+A.~Urlana et al., ``TeSum: Human-Generated Abstractive
+Summarization Corpus for Telugu,''
+in \textit{Proc.\ 13th LREC}, pp.~3862--3869, 2022.
+
+\bibitem{hu2022lora}
+E.~J.~Hu et al., ``LoRA: Low-Rank Adaptation of Large
+Language Models,'' in \textit{Proc.\ ICLR}, 2022.
+
+\bibitem{dettmers2022int8}
+T.~Dettmers et al., ``LLM.int8(): 8-bit Matrix Multiplication
+for Transformers at Scale,'' in \textit{Proc.\ NeurIPS}, 2022.
+
+\end{thebibliography}
+
+\end{document}
+

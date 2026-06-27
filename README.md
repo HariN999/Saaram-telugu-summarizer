@@ -19,7 +19,7 @@ The system supports direct Telugu text input, URL-based article extraction, extr
 - **API Docs:** https://harin999-telugu-summarizer-backend.hf.space/docs
 - **Health Check:** https://harin999-telugu-summarizer-backend.hf.space/health
 
-![App Preview](screenshots/Home.png)
+![App Preview](research/paper/screenshots/Home.png)
 
 *For the smoothest demo on free hosting, start with the `TF-IDF` method. Transformer requests may take longer because the model is loaded lazily and Speak mode is intentionally heavier than text-only summarize paths.*
 
@@ -71,8 +71,13 @@ For reliability and hardening features implemented on this stack, see [docs/RELI
 .
 ├── backend/          # FastAPI application, pipelines, extractors, fallback logic
 ├── frontend/         # React, Vite, Framer Motion UI
+├── research/         # Research paper, notebooks, offline evaluation scripts, and output logs
+│   ├── paper/
+│   │   └── screenshots/
+│   ├── notebooks/
+│   ├── evaluation/
+│   └── outputs/
 ├── docs/             # Technical specifications and documentation
-├── screenshots/      # Application workflow screenshots
 ├── assets/           # Architecture diagrams and design files
 ├── Dockerfile        # Backend container packaging
 └── requirements.txt  # Backend Python dependencies
@@ -80,19 +85,19 @@ For reliability and hardening features implemented on this stack, see [docs/RELI
 ## 📸 Screenshots
 
 ### Home Page
-![Home](screenshots/Home.png)
+![Home](research/paper/screenshots/Home.png)
 
 ### Text Summarization
-![Text](screenshots/Text.png)
+![Text](research/paper/screenshots/Text.png)
 
 ### URL Summarization
-![URL](screenshots/URL.png)
+![URL](research/paper/screenshots/URL.png)
 
 ### Speak News (Radio Mode)
-![Speak](screenshots/Radio.png)
+![Speak](research/paper/screenshots/Radio.png)
 
 ### API Docs
-![Docs](screenshots/Docs.png)
+![Docs](research/paper/screenshots/Docs.png)
 
 ## 📊 Evaluation Snapshot
 
