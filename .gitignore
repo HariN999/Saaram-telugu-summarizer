@@ -63,3 +63,22 @@ Thumbs.db
 # =========================
 .pytest_cache/
 coverage/
+
+# Evaluation artifacts
+backend/eval_results/
+*.csv
+*.json
+
+# Model checkpoints
+backend/model/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+myenv/
+
+# Local benchmark scripts output
+*_latency*
