@@ -88,22 +88,11 @@ The system **never returns an unhandled empty response**.
 
 ## 🏗️ Architecture
 
-```
-Input (text / URL / RSS)
-    ↓
-Extraction → Unicode Cleaning
-    ↓
-Adaptive Router
-    ↓                    ↓
-TF-IDF V2            mT5 Base / Fine-tuned
-(char n-gram)        (beam search, trigram block)
-    ↓                    ↓
-        Summary Output
-             ↓ (optional)
-        Edge TTS → Telugu MP3
-             ↓
-        FastAPI → React Frontend
-```
+![Architecture](assets/system_architecture.svg)
+Saaram follows a three-tier architecture consisting of:
+- React frontend
+- FastAPI orchestration layer
+- Adaptive NLP inference pipeline with optional speech synthesis
 
 **Deployment:**
 - Frontend: Vercel (React + Vite + Tailwind)
@@ -148,24 +137,29 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 
 ## 📂 Project Structure
 
-```
+```text
 .
 ├── backend/
-│   ├── app.py            # FastAPI routes (7 endpoints)
-│   ├── pipeline.py       # Orchestrator
-│   ├── router.py         # Adaptive inference router
-│   └── summarizers/
-│       ├── tfidf_v2.py   # Morphology-aware extractive
-│       ├── mt5_base.py   # Pretrained abstractive
-│       └── mt5_ft.py     # QLoRA fine-tuned
-├── frontend/
+│   ├── app.py                  # FastAPI API entrypoint
+│   ├── pipeline.py             # NLP orchestration pipeline
+│   ├── router.py               # Adaptive inference router
+│   ├── summarize_tfidf.py      # TF-IDF summarizer
+│   ├── summarize_mt5.py        # mT5 summarizer
+│   ├── services/               # RSS / news services
+│   └── utils & configs         # Extraction, cleaning, TTS, validation
+│
+├── frontend/                   # React + Vite web UI
+│
 ├── research/
-│   ├── paper/            # LaTeX source (CIS 2026)
-│   ├── notebooks/        # Training & evaluation
-│   └── evaluation/       # ROUGE + BERTScore results
-├── docs/
+│   ├── paper/                  # Research paper & assets
+│   ├── notebooks/              # Training / experimentation
+│   └── evaluation/             # Benchmark scripts & metrics
+│
+├── assets/                     # Architecture diagrams
+├── docs/                       # Technical documentation
 ├── Dockerfile
-└── requirements.txt
+├── requirements.txt
+└── README.md
 ```
 
 ---
