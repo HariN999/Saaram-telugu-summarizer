@@ -1,2 +1,0 @@
-default_files = ['cis.tex'];
-$pdf_mode = 5;

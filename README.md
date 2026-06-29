@@ -11,7 +11,7 @@
 Built for **low-resource deployment**: balancing quality, latency, memory efficiency, and reliability under free-tier cloud constraints.
 
 > 📄 **Research:** Manuscript under review at **CIS 2026** (NIT Warangal × SCRS, Springer LNNS)
-> *Morphology-Aware Telugu News Summarization: Comparing Extractive and Abstractive Approaches under Resource Constraints*
+> *Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5*
 
 ---
 
