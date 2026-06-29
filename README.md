@@ -141,26 +141,25 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 .
 ├── backend/
 │   ├── app.py                  # FastAPI API entrypoint
-│   ├── pipeline.py             # NLP orchestration pipeline
+│   ├── pipeline.py             # Core NLP pipeline
 │   ├── router.py               # Adaptive inference router
 │   ├── summarize_tfidf.py      # TF-IDF summarizer
 │   ├── summarize_mt5.py        # mT5 summarizer
-│   ├── services/               # RSS / news services
-│   └── utils & configs         # Extraction, cleaning, TTS, validation
+│   ├── services/               # RSS / news ingestion
+│   ├── extract.py              # URL article extraction
+│   ├── clean.py                # Text cleaning & normalization
+│   ├── tts.py                  # Telugu speech synthesis
+│   └── config.py               # Runtime configuration
 │
 ├── frontend/                   # React + Vite web UI
-│
-├── research/
-│   ├── paper/                  # Research paper & assets
-│   ├── notebooks/              # Training / experimentation
-│   └── evaluation/             # Benchmark scripts & metrics
-│
+├── research/                   # Paper, notebooks, evaluation
 ├── assets/                     # Architecture diagrams
 ├── docs/                       # Technical documentation
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
 ```
+
 
 ---
 
