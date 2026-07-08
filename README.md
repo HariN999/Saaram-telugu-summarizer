@@ -10,7 +10,7 @@
 
 Built for **low-resource deployment**: balancing quality, latency, memory efficiency, and reliability under free-tier cloud constraints.
 
-> 📄 **Research:** Manuscript under review at **CIS 2026** (NIT Warangal × SCRS, Springer LNNS)
+> 📄 Research: Manuscript submitted to **CIS 2026** (NIT Warangal × SCRS, Springer LNNS)
 > *Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5*
 
 ---
@@ -202,9 +202,9 @@ npm run dev
 | Name | Role |
 |------|------|
 | Hariharan Narlakanti | Backend, NLP, Research |
-| Vishnu Vardhan Reddy Padala | Frontend, UI |
+| Vishnu Vardhan Reddy Padala | Frontend Engineering & UI/UX |
 | Vivek Nidumolu | Testing, Debugging |
-| Sanjeev Practur | Data Collection & Cleaning |
+| Sanjeev Practur | Data Collection & Preprocessing |
 
 ---
 
