@@ -210,25 +210,24 @@ function HeroSection() {
           <MotionDiv
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.25, ease: "easeOut" }}
+            transition={{ duration: 0.25, delay: 0.33, ease: "easeOut" }}
             className="app-card flex flex-col p-6 h-full border border-[var(--border)] bg-[var(--surface)]"
           >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--secondary)]/10 border border-[var(--secondary)]/20">
-              <FileText className="h-5 w-5 text-[var(--secondary)]" />
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+              <Radio className="h-5 w-5 text-[var(--primary)]" />
             </div>
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Text Summarizer</h3>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Saaram Radio</h3>
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-6 flex-1">
-              Summarize Telugu text into concise key insights.
+              Listen to AI-generated Telugu radio bulletins.
             </p>
             <Link
-              to="/summarize"
+              to="/radio"
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
             >
-              Summarize Text
+              Listen to Radio
               <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </MotionDiv>
-
           <MotionDiv
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -250,25 +249,24 @@ function HeroSection() {
               <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </MotionDiv>
-
           <MotionDiv
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.33, ease: "easeOut" }}
+            transition={{ duration: 0.25, delay: 0.25, ease: "easeOut" }}
             className="app-card flex flex-col p-6 h-full border border-[var(--border)] bg-[var(--surface)]"
           >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/20">
-              <Radio className="h-5 w-5 text-[var(--primary)]" />
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--secondary)]/10 border border-[var(--secondary)]/20">
+              <FileText className="h-5 w-5 text-[var(--secondary)]" />
             </div>
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Saaram Radio</h3>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">Text Summarizer</h3>
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-6 flex-1">
-              Listen to AI-generated Telugu radio bulletins.
+              Summarize Telugu text into concise key insights.
             </p>
             <Link
-              to="/radio"
+              to="/summarize"
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--primary)] hover:opacity-80 transition-opacity mt-auto group"
             >
-              Listen to Radio
+              Summarize Text
               <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </MotionDiv>
