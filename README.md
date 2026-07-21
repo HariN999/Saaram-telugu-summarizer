@@ -110,15 +110,17 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 | TF-IDF V1 (word-level) | 0.0709 | 0.0128 | 0.0554 | 0.6626 |
 | TF-IDF V2 (char n-gram) | 0.0811 | 0.0162 | 0.0628 | 0.6671 |
 | mT5 Base (pretrained) | 0.1610 | 0.0478 | 0.1420 | **0.7273** |
-| mT5 Fine-tuned (QLoRA) | **0.1639** | **0.0496** | **0.1452** | 0.7272 |
+| mT5 Fine-tuned (8-bit LoRA) | **0.1639** | **0.0496** | **0.1452** | 0.7272 |
 | Auto Router | 0.1562 | 0.0458 | 0.1372 | 0.7241 |
 
-> BERTScore F1 computed via `microsoft/deberta-xlarge-mnli` (default rescaling). ROUGE uses a custom Unicode-preserving tokenizer — standard ROUGE strips Telugu characters.
+> BERTScore F1 computed via `bert-base-multilingual-cased` with default rescaling for Telugu. ROUGE uses a custom Unicode-preserving tokenizer — standard ROUGE strips Telugu characters.
 
 **Key findings:**
 - Morphology-aware TF-IDF V2 improves **ROUGE-2 by 26.6%** over word-level V1
-- QLoRA fine-tuning improves lexical precision (ROUGE-L +0.0032) but **not semantic quality** (BERTScore unchanged) — a **negative result**: the base checkpoint already saw the XL-Sum Telugu training split during multilingual pretraining
+- 8-bit LoRA fine-tuning improves lexical precision (ROUGE-L +0.0032) but **not semantic quality** (BERTScore unchanged) — a **negative result**: the base checkpoint already saw the XL-Sum Telugu training split during multilingual pretraining
 - mT5 substantially outperforms TF-IDF on semantic quality (BERTScore +0.0602)
+
+> 📖 For extended metrics (BLEU, METEOR), statistical significance testing ($p$-values), empirical memory profiling, and $n$-gram sensitivity analysis, see [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ---
 
@@ -129,7 +131,7 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 | Frontend | React, Vite, Tailwind CSS, Framer Motion |
 | Backend | FastAPI, Uvicorn, Pydantic |
 | NLP | HuggingFace Transformers, PyTorch, scikit-learn |
-| Fine-tuning | QLoRA (4-bit NF4, LoRA rank 16), Kaggle T4 GPU |
+| Fine-tuning | QLoRA (8-bit quantization, LoRA rank 16, 1.77M params), Kaggle T4 GPU |
 | Speech | Microsoft Edge TTS (`te-IN-ShrutiNeural`) |
 | Deployment | Hugging Face Spaces (Docker), Vercel |
 
@@ -152,7 +154,15 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 │   └── config.py               # Runtime configuration
 │
 ├── frontend/                   # React + Vite web UI
-├── research/                   # Paper, notebooks, evaluation
+├── research/                   # Research experiments, notebooks, evaluation
+│   ├── paper/                  # Paper figures & screenshots
+│   │   └── screenshots/        # UI & demo screenshots
+│   ├── notebooks/              # LoRA training notebooks
+│   └── evaluation/             # Reproducible evaluation & analysis scripts
+│       ├── extended_eval.py          # BLEU & METEOR evaluation
+│       ├── significance_analysis.py  # Paired t-tests & Wilcoxon testing
+│       ├── memory_profiler.py        # CPU RAM & footprint profiler
+│       └── tfidf_ngram_sensitivity.py# Character n-gram range sensitivity
 ├── assets/                     # Architecture diagrams
 ├── docs/                       # Technical documentation
 ├── Dockerfile

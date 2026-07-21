@@ -107,4 +107,13 @@ backend/model/
 # Node
 frontend/node_modules/
 frontend/dist/
+
+# =========================
+# LaTeX Manuscript & Reviewer Response (Private)
+# =========================
+*.tex
+research/paper/*.tex
+reviewer_response.md
+
+
 ```
