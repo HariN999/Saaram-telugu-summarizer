@@ -19,7 +19,7 @@ Built for **low-resource deployment**: balancing quality, latency, memory effici
 
 | | |
 |---|---|
-| **Frontend** | https://automated-telugu-text-summarization.vercel.app/ |
+| **Frontend** | https://saaram-nlp.vercel.app/ |
 | **Backend API** | https://harin999-telugu-summarizer-backend.hf.space |
 | **API Docs** | https://harin999-telugu-summarizer-backend.hf.space/docs |
 | **Health Check** | https://harin999-telugu-summarizer-backend.hf.space/health |
@@ -228,7 +228,7 @@ npm run dev
 
 ## 🔗 Links
 
-- [Live Demo](https://automated-telugu-text-summarization.vercel.app/)
+- [Live Demo](https://saaram-nlp.vercel.app/)
 - [Backend API](https://harin999-telugu-summarizer-backend.hf.space)
 - [API Docs /docs](https://harin999-telugu-summarizer-backend.hf.space/docs)
 - [Technical Docs](docs/)

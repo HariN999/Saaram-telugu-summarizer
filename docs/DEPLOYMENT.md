@@ -69,7 +69,7 @@ Recommended environment variables:
 PORT=7860
 DEBUG=false
 CORS_ORIGIN_REGEX=https://.*\.vercel\.app
-CORS_ORIGINS=https://automated-telugu-text-summarization.vercel.app
+CORS_ORIGINS=https://saaram-nlp.vercel.app
 ```
 
 ### Frontend: Vercel
