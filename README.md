@@ -8,6 +8,10 @@
 ![DEV.to](https://img.shields.io/badge/DEV.to-Case%20Study-0A0A0A?logo=devto)
 
 **Saaram** (సారం, *"essence"*) is a production-deployed Telugu news summarization and speech generation system combining **morphology-aware TF-IDF**, **mT5 transformer summarization**, **adaptive inference routing**, and **Telugu neural text-to-speech**.
+<p align="center">
+  <img src="assets/Saaram%20Animation.gif" width="500" alt="Saaram Animation" />
+</p>
+
 
 Built for **low-resource deployment**: balancing quality, latency, memory efficiency, and reliability under free-tier cloud constraints.
 
