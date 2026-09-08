@@ -1,0 +1,64 @@
+name: Deploy Backend to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-hf.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Hugging Face Spaces
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Hugging Face CLI
+        run: |
+          curl -LsSf https://hf.co/cli/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Hugging Face CLI
+        run: |
+          hf version
+
+      - name: Prepare clean deployment directory
+        run: |
+          rm -rf deploy
+          mkdir -p deploy/backend
+          cp Dockerfile deploy/
+          cp requirements.txt deploy/
+          rsync -av \
+            --exclude='venv' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='.pytest_cache' \
+            --exclude='.env' \
+            backend/ deploy/backend/
+
+      - name: Verify deployment structure
+        run: |
+          echo "=== Staging directory root ==="
+          ls -la deploy
+          echo "=== Staging directory backend ==="
+          ls -la deploy/backend
+
+      - name: Deploy to Hugging Face Spaces
+        env:
+          HF_OIDC_RESOURCE: spaces/HariN999/telugu-summarizer-backend
+          HF_HUB_DISABLE_UPDATE_CHECK: "1"
+        run: |
+          hf upload HariN999/telugu-summarizer-backend ./deploy . \
+            --repo-type space \
+            --commit-message "Deploy backend from commit ${GITHUB_SHA::7}"
