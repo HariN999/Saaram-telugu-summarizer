@@ -62,7 +62,13 @@ curl http://localhost:7860/health
 
 ### Backend: Hugging Face Spaces
 
-Use the existing `Dockerfile` with the Hugging Face Spaces Docker SDK. The free CPU tier provides 16GB RAM, which gives the mT5 and TTS paths substantially more headroom than the previous 512MB Render deployment.
+The backend is hosted on Hugging Face Spaces using the Docker SDK. The free CPU tier provides 16GB RAM, which gives the mT5 and TTS paths substantially more headroom than the previous 512MB Render deployment.
+
+#### Automated CI/CD (GitHub Actions + OIDC)
+Deployments to the Space are fully automated via [`.github/workflows/deploy-hf.yml`](../.github/workflows/deploy-hf.yml) using **Hugging Face Trusted Publishers**:
+- **Authentication:** Authenticates via GitHub Actions OpenID Connect (OIDC) token exchange. No permanent `HF_TOKEN` is stored in GitHub Secrets.
+- **Triggers:** Pushes to the `main` branch affecting `backend/**`, `requirements.txt`, `Dockerfile`, or `.github/workflows/deploy-hf.yml` (also supports manual `workflow_dispatch`).
+- **Target Space:** [`HariN999/telugu-summarizer-backend`](https://huggingface.co/spaces/HariN999/telugu-summarizer-backend)
 
 Recommended environment variables:
 ```env

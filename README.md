@@ -1,5 +1,6 @@
 # Saaram (సారం) — Telugu News Summarization & Speech
 
+[![Deploy Backend to Hugging Face Spaces](https://github.com/HariN999/Saaram-telugu-summarizer/actions/workflows/deploy-hf.yml/badge.svg)](https://github.com/HariN999/Saaram-telugu-summarizer/actions/workflows/deploy-hf.yml)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
 ![React](https://img.shields.io/badge/React-Vite-61DAFB)
 ![Transformers](https://img.shields.io/badge/HuggingFace-Transformers-FFD21E)
@@ -11,11 +12,13 @@
   <img src="assets/Saaram%20Animation.gif" width="500" alt="Saaram Animation" />
 </p>
 
-
 Built for **low-resource deployment**: balancing quality, latency, memory efficiency, and reliability under free-tier cloud constraints.
 
-> 📄 Research: Manuscript submitted to **CIS 2026** (NIT Warangal × SCRS, Springer LNNS)
-> *Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5*
+> 🎤 Research Presentation: Presented at **CIS 2026 — 7th Congress on Intelligent Systems** (NIT Warangal × SCRS)
+>
+> 📄 *Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5*
+>
+> 📖 Conference proceedings series: Springer Lecture Notes in Networks and Systems (LNNS)
 
 ---
 
@@ -137,6 +140,7 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 | NLP | HuggingFace Transformers, PyTorch, scikit-learn |
 | Fine-tuning | QLoRA (8-bit quantization, LoRA rank 16, 1.77M params), Kaggle T4 GPU |
 | Speech | Microsoft Edge TTS (`te-IN-ShrutiNeural`) |
+| CI/CD | GitHub Actions (OIDC Trusted Publishers) |
 | Deployment | Hugging Face Spaces (Docker), Vercel |
 
 ---
@@ -145,6 +149,8 @@ Evaluated on the complete **XL-Sum Telugu test split (1,302 samples)**.
 
 ```text
 .
+├── .github/workflows/
+│   └── deploy-hf.yml           # Backend CI/CD to Hugging Face Spaces
 ├── backend/
 │   ├── app.py                  # FastAPI API entrypoint
 │   ├── pipeline.py             # Core NLP pipeline
@@ -199,6 +205,45 @@ npm run dev
 
 ---
 
+## Automated Backend Deployment
+
+Saaram features automated continuous deployment for its backend API using GitHub Actions and **Hugging Face Trusted Publishers** via OpenID Connect (OIDC).
+
+### Deployment Flow
+
+```text
+GitHub Repository (push to main)
+  └── HariN999/Saaram-telugu-summarizer
+             │
+             │ Triggers on backend/**, Dockerfile, requirements.txt
+             ▼
+       GitHub Actions
+  └── .github/workflows/deploy-hf.yml
+             │
+             ▼ (OIDC Token Exchange)
+Hugging Face Trusted Publishers
+  └── Validates claims (repository, branch, workflow)
+             │
+             ▼ (Short-lived, scoped token)
+     Hugging Face Space
+  └── HariN999/telugu-summarizer-backend
+```
+
+### Key Highlights & Security Benefits
+
+- **OIDC Authentication:** GitHub Actions authenticates directly with Hugging Face using short-lived OpenID Connect (OIDC) identity tokens.
+- **Zero Permanent Secrets:** No long-lived Hugging Face personal access token (`HF_TOKEN`) is required or stored in GitHub Secrets.
+- **Trusted Publishers:** Hugging Face validates the cryptographic claims (repository, branch, and workflow) and issues a short-lived, repository-scoped token specifically for the deployment run.
+- **Automated Triggers:** The workflow deploys automatically on every push to the `main` branch when changes occur in:
+  - `backend/**`
+  - `requirements.txt`
+  - `Dockerfile`
+  - `.github/workflows/deploy-hf.yml`
+- **Manual Execution:** Can also be triggered manually on-demand via `workflow_dispatch`.
+- **Target Space:** Deploys the containerized FastAPI backend to [`HariN999/telugu-summarizer-backend`](https://huggingface.co/spaces/HariN999/telugu-summarizer-backend) running the Hugging Face Spaces Docker SDK.
+
+---
+
 ## 📸 Screenshots
 
 | Home | Summarize |
@@ -211,23 +256,26 @@ npm run dev
 
 ---
 
-## 👥 Team
+## 📚 Research & Conference Presentation
 
-| Name | Role |
-|------|------|
-| Hariharan Narlakanti | Backend Development, NLP |
-| Vishnu Vardhan Reddy Padala | Frontend Development, AI Integration |
-| Vivek Nidumolu | Testing, Debugging |
-| Sanjeev Practur | Data Collection & Preprocessing |
+The research methodology and system architecture behind Saaram were presented at **CIS 2026**:
+
+- **Paper Title:** *Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5*
+- **Conference:** 7th Congress on Intelligent Systems (CIS 2026)
+- **Organizers:** National Institute of Technology (NIT) Warangal × Soft Computing Research Society (SCRS)
+- **Proceedings Series:** Springer Lecture Notes in Networks and Systems (LNNS)
 
 ---
 
+## ✍️ Authors
 
-## 📚 Research Paper
+This project is based on the research work presented at **CIS 2026**.
 
-> **Saaram: Resource-Aware Telugu News Summarization with Morphology-Aware TF-IDF and mT5**
->
-> Submitted to **CIS 2026 — 7th Congress on Intelligent Systems**, Springer LNNS Proceedings (NIT Warangal × SCRS)
+- Hariharan Narlakanti
+- Vivek Nidumolu
+- Vishnu Vardhan Reddy Padala
+- Sanjeev Practur
+- Vinay Simha Reddy Tappeta
 
 ---
 
